@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Loss Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: rgba(37,99,235,.08);
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --success: #16a34a;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+            --warn-bg: #fff7ed;
+            --warn-border: #f59e0b;
+            --warn-text: #9a3412;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.5; padding: 20px;
+        }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
+        .subtitle { text-align: center; color: var(--text-light); margin-bottom: 24px; font-size: 0.9rem; }
+        .container { max-width: 1200px; margin: 0 auto; }
+
+        .card {
+            background: var(--card); border-radius: 10px;
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+            margin-bottom: 20px; padding: 4px; background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .tab-btn {
+            padding: 8px 20px; border: none; border-radius: 6px;
+            background: transparent; color: var(--text-light);
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; position: relative;
+        }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+        .tab-btn:hover:not(.active) { background: #e2e8f0; }
+        .tab-btn .tab-close {
+            display: inline-block; margin-left: 8px; font-size: 0.75rem;
+            opacity: .6; cursor: pointer; padding: 2px 4px; border-radius: 3px;
+        }
+        .tab-btn .tab-close:hover { opacity: 1; background: rgba(0,0,0,.15); }
+        .tab-add {
+            padding: 8px 14px; border: 2px dashed var(--border); border-radius: 6px;
+            background: transparent; color: var(--text-light);
+            font-size: 0.9rem; cursor: pointer; transition: all .2s;
+        }
+        .tab-add:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* Cabinet header */
+        .cabinet-header { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 16px; }
+        .cabinet-header[style*="grid-template-columns:1fr 1fr 1fr 1fr"] { grid-template-columns: 2fr 1fr 1fr 1fr; }
+        .cabinet-header label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px; }
+        .cabinet-header input, .cabinet-header select {
+            width: 100%; padding: 8px 12px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem;
+            transition: border-color .2s;
+        }
+        .cabinet-header input:focus, .cabinet-header select:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+
+        /* Section headers */
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; margin: 16px 0 8px;
+            background: #f1f5f9; border-radius: 6px; font-weight: 600;
+            font-size: 0.95rem; color: var(--text);
+        }
+        .section-header .section-total {
+            font-size: 0.9rem; color: var(--primary); font-weight: 700;
+        }
+
+        /* Component table */
+        .comp-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        .comp-table th {
+            padding: 8px 10px; text-align: left; font-size: 0.8rem;
+            font-weight: 600; color: var(--text-light); text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 2px solid var(--border);
+        }
+        .comp-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .comp-table tr:hover td { background: var(--primary-light); }
+        .comp-table input, .comp-table select {
+            width: 100%; padding: 6px 8px;
+            border: 1px solid transparent; border-radius: 4px; font-size: 0.9rem;
+            background: transparent; transition: all .15s;
+        }
+        .comp-table input:hover, .comp-table select:hover {
+            border-color: var(--border);
+        }
+        .comp-table input:focus, .comp-table select:focus {
+            outline: none; border-color: var(--primary); background: #fff;
+            box-shadow: 0 0 0 2px rgba(37,99,235,.12);
+        }
+        .comp-table .col-ref { width: 12%; }
+        .comp-table .col-comp { width: 32%; }
+        .comp-table .col-num { width: 12%; text-align: center; }
+        .comp-table .col-total { width: 14%; text-align: right; font-weight: 600; }
+        .comp-table .col-actions { width: 6%; text-align: center; }
+        .comp-table input[type="number"] { text-align: center; }
+        .comp-table .total-cell {
+            font-weight: 600; color: var(--primary); text-align: right;
+            padding-right: 12px; font-size: 0.95rem;
+        }
+        .comp-table .total-cell.zero { color: var(--text-light); opacity: .5; }
+
+        .row-delete {
+            background: none; border: none; color: var(--danger); cursor: pointer;
+            font-size: 1.1rem; padding: 4px 8px; border-radius: 4px; transition: all .15s;
+            opacity: .5;
+        }
+        .row-delete:hover { opacity: 1; background: #fef2f2; }
+
+        .add-row-btn {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 6px 14px; border: 1px dashed var(--border); border-radius: 6px;
+            background: transparent; color: var(--text-light);
+            font-size: 0.85rem; cursor: pointer; transition: all .2s; margin-top: 4px;
+        }
+        .add-row-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+        /* Summary */
+        .summary-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+            border: 2px solid #bfdbfe; border-radius: 10px;
+            padding: 20px; margin-top: 16px;
+        }
+        .summary-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 16px; margin-bottom: 12px;
+        }
+        .summary-item { text-align: center; }
+        .summary-item .label { font-size: 0.8rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+        .summary-item .value { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
+        .summary-item .unit { font-size: 0.85rem; color: var(--text-light); }
+        .summary-item.highlight .value { color: var(--success); font-size: 1.8rem; }
+
+        .derating-row {
+            display: flex; align-items: center; justify-content: center;
+            gap: 10px; margin-top: 12px; padding-top: 12px;
+            border-top: 1px solid #bfdbfe; font-size: 0.9rem;
+        }
+        .derating-row label { font-weight: 600; color: var(--text-light); }
+        .derating-row input {
+            width: 70px; padding: 6px 8px; border: 1px solid var(--border);
+            border-radius: 4px; text-align: center; font-size: 0.95rem;
+        }
+        .derating-row input:focus { outline: none; border-color: var(--primary); }
+
+        /* Component library */
+        .library-toggle {
+            padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px;
+            background: #f8fafc; color: var(--text-light); font-size: 0.85rem;
+            cursor: pointer; transition: all .2s;
+        }
+        .library-toggle:hover { border-color: var(--primary); color: var(--primary); }
+        .library-panel {
+            display: none; margin-top: 12px; padding: 16px;
+            background: #f8fafc; border-radius: 8px; border: 1px solid var(--border);
+        }
+        .library-panel.open { display: block; }
+        .library-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 8px; max-height: 400px; overflow-y: auto;
+        }
+        .library-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; background: #fff; border: 1px solid var(--border);
+            border-radius: 6px; font-size: 0.85rem; transition: all .15s;
+        }
+        .library-item:hover { border-color: var(--primary); background: var(--primary-light); }
+        .library-item .lib-name { font-weight: 600; }
+        .library-item .lib-loss { color: var(--text-light); font-size: 0.8rem; }
+        .library-item .lib-add {
+            background: var(--primary); color: #fff; border: none;
+            padding: 4px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 0.8rem; font-weight: 600;
+        }
+        .library-item .lib-add:hover { background: var(--primary-hover); }
+
+        /* Manage library styles */
+        .lib-manage-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .lib-manage-table th {
+            text-align: left; padding: 6px 8px; font-size: 0.8rem;
+            color: var(--text-light); border-bottom: 2px solid var(--border);
+        }
+        .lib-manage-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+        .lib-manage-table input, .lib-manage-table select {
+            width: 100%; padding: 5px 8px; border: 1px solid var(--border);
+            border-radius: 4px; font-size: 0.85rem;
+        }
+        .lib-manage-table input:focus, .lib-manage-table select:focus {
+            outline: none; border-color: var(--primary);
+        }
+
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn {
+            padding: 10px 24px; border: none; border-radius: 6px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: #fff; }
+        .btn-sm { padding: 6px 14px; font-size: 0.85rem; }
+
+        /* Project summary (all cabinets) */
+        .project-summary {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 2px solid #86efac; border-radius: 10px;
+            padding: 20px; margin-top: 20px;
+        }
+        .project-summary h3 {
+            font-size: 1rem; color: var(--success); margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .project-table { width: 100%; border-collapse: collapse; }
+        .project-table th {
+            text-align: left; padding: 8px 12px; font-size: 0.8rem;
+            color: var(--text-light); border-bottom: 2px solid #86efac;
+            font-weight: 600; text-transform: uppercase;
+        }
+        .project-table td { padding: 8px 12px; border-bottom: 1px solid #d1fae5; font-size: 0.9rem; }
+        .project-table tr:last-child td { border-bottom: none; font-weight: 700; }
+        .project-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #1e293b; color: #fff; padding: 12px 24px;
+            border-radius: 8px; font-size: 0.9rem;
+            opacity: 0; transform: translateY(20px); transition: all .3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* Hidden file inputs */
+        .hidden-input { display: none; }
+
+        /* Cooling recommendation */
+        .cooling-card {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border: 2px solid #fbbf24; border-radius: 10px;
+            padding: 20px; margin-top: 16px;
+        }
+        .cooling-card h3 {
+            font-size: 1rem; color: #92400e; margin-bottom: 12px;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .cooling-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .cooling-grid label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px; }
+        .cooling-grid input, .cooling-grid select {
+            width: 100%; padding: 8px 12px;
+            border: 1px solid #fbbf24; border-radius: 6px; font-size: 0.95rem;
+            background: #fffbeb;
+        }
+        .cooling-grid input:focus, .cooling-grid select:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+        .cooling-result {
+            margin-top: 14px; padding: 12px 16px; background: #fff;
+            border-radius: 8px; font-size: 0.9rem;
+        }
+        .cooling-result .rec { font-weight: 700; color: var(--success); font-size: 1.1rem; }
+        .cooling-result .detail { color: var(--text-light); font-size: 0.85rem; margin-top: 4px; }
+
+        @media (max-width: 700px) {
+            .cabinet-header { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+            .comp-table { font-size: 0.8rem; }
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Power Loss Calculator</h1>
+        <p class="subtitle">Calculate power dissipation in electrical cabinets to determine cooling requirements</p>
+
+        <!-- Project Info -->
+        <div class="card">
+            <h2><span class="icon">📋</span> Project Information</h2>
+            <div class="cabinet-header">
+                <div>
+                    <label for="projectName">Project Name</label>
+                    <input type="text" id="projectName" placeholder="Enter project name...">
+                </div>
+                <div>
+                    <label for="projectNote">Notes</label>
+                    <input type="text" id="projectNote" placeholder="Optional notes...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Cabinet Tabs -->
+        <div class="card" id="mainCard">
+            <h2><span class="icon">🗄️</span> Cabinets</h2>
+            <div class="tab-bar" id="tabBar">
+                <!-- tabs generated by JS -->
+                <button class="tab-add" onclick="addCabinet()" title="Add new cabinet">+ Add Cabinet</button>
+            </div>
+
+            <!-- Cabinet panels rendered here -->
+            <div id="cabinetPanels"></div>
+        </div>
+
+        <!-- Project Summary (all cabinets) -->
+        <div class="card" id="projectSummaryCard" style="display:none">
+            <h2><span class="icon">📊</span> Project Summary</h2>
+            <div class="project-summary" id="projectSummary"></div>
+        </div>
+
+        <!-- Component Library -->
+        <div class="card">
+            <h2>
+                <span class="icon">📚</span> Component Library
+                <span style="flex:1"></span>
+                <button class="library-toggle" onclick="toggleLibrary()">Show / Hide Library</button>
+                <button class="library-toggle" style="margin-left:6px" onclick="toggleLibraryManager()">Manage</button>
+            </h2>
+            <div class="library-panel" id="libraryPanel">
+                <div style="margin-bottom:10px;display:flex;gap:8px;align-items:center;">
+                    <span style="font-size:0.85rem;color:var(--text-light);">Click <strong>Add</strong> to insert a component into the active cabinet section.</span>
+                    <select id="libTargetSection" style="padding:4px 8px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;">
+                        <option value="power">→ Power Section</option>
+                        <option value="control">→ Control Section</option>
+                    </select>
+                </div>
+                <div class="library-grid" id="libraryGrid"></div>
+            </div>
+            <div class="library-panel" id="libraryManagerPanel">
+                <h3 style="font-size:0.95rem;margin-bottom:8px;">Manage Library Components</h3>
+                <div id="libraryManagerContent"></div>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="btn btn-primary btn-sm" onclick="addLibraryItem()">+ Add Component</button>
+                    <button class="btn btn-outline btn-sm" onclick="resetLibraryDefaults()">Reset to Defaults</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <h2><span class="icon">💾</span> Save &amp; Export</h2>
+            <div class="btn-row">
+                <button class="btn btn-success" onclick="exportExcel()">📊 Export to Excel</button>
+                <button class="btn btn-outline" onclick="saveJson()">🧾 Save Project (JSON)</button>
+                <button class="btn btn-outline" onclick="triggerJsonLoad()">📂 Load Project (JSON)</button>
+                <button class="btn btn-outline" onclick="copyProjectSummary()">📋 Copy Summary</button>
+                <button class="btn btn-danger" onclick="clearAll()">✕ Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="jsonFileInput" accept=".json" class="hidden-input">
+    <div class="toast" id="toast"></div>
+
+    <script>
+    // ===================== DATA MODEL =====================
+
+    const DEFAULT_LIBRARY = [
+        { cat: 'power', ref: 'F11-18',  name: 'MCB 10A 3-pole',           loss: 1.1  },
+        { cat: 'power', ref: 'QA11-18', name: 'Contactor',                loss: 2    },
+        { cat: 'power', ref: 'TA1',     name: 'VFD G120',                 loss: 60   },
+        { cat: 'power', ref: 'TA1',     name: 'Servo Drive S210',         loss: 67   },
+        { cat: 'power', ref: 'QB1',     name: 'Main switch 120A',         loss: 20   },
+        { cat: 'power', ref: 'F900',    name: 'MCB 6A 1-pole',            loss: 2    },
+        { cat: 'power', ref: 'F901',    name: 'RCCB 16A',                 loss: 2    },
+        { cat: 'power', ref: 'TA1',     name: 'SITOP 20A',                loss: 31   },
+        { cat: 'power', ref: 'TA2',     name: 'SITOP 40A',                loss: 83   },
+        { cat: 'power', ref: 'R',       name: 'Braking resistor',         loss: 150  },
+        { cat: 'power', ref: 'TA1',     name: 'SITOP 10A',                loss: 16   },
+        { cat: 'power', ref: 'R',       name: 'Line reactor',             loss: 20   },
+        { cat: 'control', ref: 'F31-F50', name: 'Electronic fuse',        loss: 10   },
+        { cat: 'control', ref: 'K31',     name: 'Relay',                  loss: 3    },
+        { cat: 'control', ref: 'K70',     name: 'Safety relay (Jokab)',   loss: 1    },
+        { cat: 'control', ref: 'K1053',   name: 'Network switch',         loss: 6    },
+        { cat: 'control', ref: 'K1101',   name: 'PN/PN coupler',          loss: 6    },
+        { cat: 'control', ref: 'K1052',   name: 'F-CPU',                  loss: 6    },
+        { cat: 'control', ref: 'K1000',   name: 'IO Node (ET200)',        loss: 2    },
+        { cat: 'control', ref: 'K1001',   name: 'IO Module (IN/OUT)',     loss: 1.3  },
+    ];
+
+    let componentLibrary = JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
+
+    // Load saved library from localStorage
+    try {
+        const saved = localStorage.getItem('powerLossLibrary');
+        if (saved) componentLibrary = JSON.parse(saved);
+    } catch(e) {}
+
+    function saveLibrary() {
+        localStorage.setItem('powerLossLibrary', JSON.stringify(componentLibrary));
+    }
+
+    function makeRow(ref, name, qty, loss) {
+        return { ref: ref || '', name: name || '', qty: qty || 0, loss: loss || 0 };
+    }
+
+    function makeDefaultPowerRows() {
+        return [
+            makeRow('F11-18',  'MCB 10A 3-pole',     0, 1.1),
+            makeRow('QA11-18', 'Contactor',           0, 2),
+            makeRow('TA1',     'VFD G120',            0, 60),
+            makeRow('TA1',     'Servo Drive S210',    0, 67),
+            makeRow('QB1',     'Main switch 120A',    0, 20),
+            makeRow('F900',    'MCB 6A 1-pole',       0, 2),
+            makeRow('F901',    'RCCB 16A',            0, 2),
+            makeRow('TA1',     'SITOP 20A',           0, 31),
+            makeRow('TA2',     'SITOP 40A',           0, 83),
+            makeRow('R',       'Braking resistor',    0, 150),
+        ];
+    }
+
+    function makeDefaultControlRows() {
+        return [
+            makeRow('F31-F50', 'Electronic fuse',     0, 10),
+            makeRow('K31',     'Relay',               0, 3),
+            makeRow('K70',     'Safety relay (Jokab)',0, 1),
+            makeRow('K1053',   'Network switch',      0, 6),
+            makeRow('K1101',   'PN/PN coupler',       0, 6),
+            makeRow('K1052',   'F-CPU',               0, 6),
+            makeRow('K1000',   'IO Node (ET200)',     0, 2),
+            makeRow('K1001',   'IO Module (IN/OUT)',  0, 1.3),
+        ];
+    }
+
+    function makeCabinet(name) {
+        return {
+            id: Date.now() + Math.random(),
+            name: name || 'New Cabinet',
+            width: 800,
+            height: 2000,
+            depth: 500,
+            derating: 80,
+            powerRows: makeDefaultPowerRows(),
+            controlRows: makeDefaultControlRows(),
+            ambientTemp: 35,
+            maxTemp: 55,
+        };
+    }
+
+    let cabinets = [makeCabinet('Motor Cabinet')];
+    let activeTab = 0;
+
+    // ===================== RENDERING =====================
+
+    function render() {
+        renderTabs();
+        renderCabinetPanel();
+        renderProjectSummary();
+        renderLibraryGrid();
+    }
+
+    function renderTabs() {
+        const bar = document.getElementById('tabBar');
+        const addBtn = bar.querySelector('.tab-add');
+        // Remove old tabs
+        bar.querySelectorAll('.tab-btn').forEach(b => b.remove());
+
+        cabinets.forEach((cab, i) => {
+            const btn = document.createElement('button');
+            btn.className = 'tab-btn' + (i === activeTab ? ' active' : '');
+            btn.innerHTML = escapeHtml(cab.name) +
+                (cabinets.length > 1 ? '<span class="tab-close" data-idx="'+i+'" title="Remove cabinet">✕</span>' : '');
+            btn.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tab-close')) {
+                    removeCabinet(parseInt(e.target.dataset.idx));
+                    return;
+                }
+                activeTab = i;
+                render();
+            });
+            bar.insertBefore(btn, addBtn);
+        });
+    }
+
+    function renderCabinetPanel() {
+        const panel = document.getElementById('cabinetPanels');
+        const cab = cabinets[activeTab];
+        if (!cab) { panel.innerHTML = ''; return; }
+
+        const powerTotal = sumSection(cab.powerRows);
+        const controlTotal = sumSection(cab.controlRows);
+        const grandTotal = powerTotal + controlTotal;
+        const derated = grandTotal * (cab.derating / 100);
+
+        let html = '';
+
+        // Cabinet info
+        html += '<div class="cabinet-header" style="grid-template-columns:1fr 1fr 1fr 1fr">';
+        html += '<div><label>Cabinet Name</label><input type="text" value="'+escapeAttr(cab.name)+'" onchange="cabinets['+activeTab+'].name=this.value;renderTabs();renderProjectSummary();"></div>';
+        html += '<div><label>Width (mm)</label><input type="number" min="0" value="'+(cab.width||0)+'" onchange="cabinets['+activeTab+'].width=parseFloat(this.value)||0;render();"></div>';
+        html += '<div><label>Height (mm)</label><input type="number" min="0" value="'+(cab.height||0)+'" onchange="cabinets['+activeTab+'].height=parseFloat(this.value)||0;render();"></div>';
+        html += '<div><label>Depth (mm)</label><input type="number" min="0" value="'+(cab.depth||0)+'" onchange="cabinets['+activeTab+'].depth=parseFloat(this.value)||0;render();"></div>';
+        html += '</div>';
+
+        // Power section
+        html += '<div class="section-header">⚡ Power Section (230/400 V)<span class="section-total">Subtotal: '+powerTotal.toFixed(1)+' W</span></div>';
+        html += renderTable(cab.powerRows, 'power');
+        html += '<button class="add-row-btn" onclick="addRow(\'power\')">+ Add Component</button>';
+
+        // Control section
+        html += '<div class="section-header">🔌 Control Section (24 V)<span class="section-total">Subtotal: '+controlTotal.toFixed(1)+' W</span></div>';
+        html += renderTable(cab.controlRows, 'control');
+        html += '<button class="add-row-btn" onclick="addRow(\'control\')">+ Add Component</button>';
+
+        // Summary
+        html += '<div class="summary-card">';
+        html += '<div class="summary-grid">';
+        html += '<div class="summary-item"><div class="label">Power Section</div><div class="value">'+powerTotal.toFixed(1)+'</div><div class="unit">Watts</div></div>';
+        html += '<div class="summary-item"><div class="label">Control Section</div><div class="value">'+controlTotal.toFixed(1)+'</div><div class="unit">Watts</div></div>';
+        html += '<div class="summary-item"><div class="label">Total (100%)</div><div class="value">'+grandTotal.toFixed(1)+'</div><div class="unit">Watts</div></div>';
+        html += '<div class="summary-item highlight"><div class="label">Derated Total</div><div class="value">'+derated.toFixed(1)+'</div><div class="unit">Watts</div></div>';
+        html += '</div>';
+        html += '<div class="derating-row">';
+        html += '<label>Derating factor:</label>';
+        html += '<input type="number" value="'+cab.derating+'" min="1" max="100" onchange="cabinets['+activeTab+'].derating=parseFloat(this.value)||80;render();"> %';
+        html += '</div>';
+        html += '</div>';
+
+        // Cooling recommendation
+        html += renderCoolingSection(cab, derated);
+
+        panel.innerHTML = html;
+    }
+
+    function calcCabinetArea(cab) {
+        // Effective cooling surface: 2 sides + back + top + front (door)
+        // Bottom is typically not counted
+        const w = (cab.width || 0) / 1000;  // m
+        const h = (cab.height || 0) / 1000;
+        const d = (cab.depth || 0) / 1000;
+        if (w <= 0 || h <= 0 || d <= 0) return 0;
+        const front = w * h;
+        const back = w * h;
+        const sides = 2 * d * h;
+        const top = w * d;
+        return front + back + sides + top;
+    }
+
+    function formatDimensions(cab) {
+        if (!cab.width && !cab.height && !cab.depth) return '—';
+        return (cab.width||0) + ' × ' + (cab.height||0) + ' × ' + (cab.depth||0) + ' mm';
+    }
+
+    function renderCoolingSection(cab, deratedPower) {
+        const ambientTemp = cab.ambientTemp || 35;
+        const maxTemp = cab.maxTemp || 55;
+        const deltaT = maxTemp - ambientTemp;
+        const cabinetArea = calcCabinetArea(cab);
+
+        let html = '<div class="cooling-card">';
+        html += '<h3>❄️ Cooling Recommendation</h3>';
+        html += '<div class="cooling-grid">';
+        html += '<div><label>Ambient Temp (°C)</label><input type="number" value="'+ambientTemp+'" onchange="cabinets['+activeTab+'].ambientTemp=parseFloat(this.value)||35;render();"></div>';
+        html += '<div><label>Max Cabinet Temp (°C)</label><input type="number" value="'+maxTemp+'" onchange="cabinets['+activeTab+'].maxTemp=parseFloat(this.value)||55;render();"></div>';
+        html += '<div><label>ΔT</label><input type="number" value="'+deltaT+'" disabled></div>';
+        html += '<div><label>Cabinet Surface Area</label><input type="text" value="'+(cabinetArea > 0 ? cabinetArea.toFixed(2) + ' m²' : '— enter dimensions above')+'" disabled></div>';
+        html += '</div>';
+
+        html += '<div class="cooling-result">';
+        if (deratedPower <= 0) {
+            html += '<div class="rec">No power loss — no cooling required</div>';
+        } else if (deltaT <= 0) {
+            html += '<div class="rec">⚠️ Max temp must be higher than ambient temp</div>';
+        } else {
+            const coeffNatural = 5.5; // W/(m²·K) for painted steel
+            const requiredArea = deratedPower / (coeffNatural * deltaT);
+            const naturalCapacity = cabinetArea > 0 ? coeffNatural * cabinetArea * deltaT : 0;
+            const deficit = deratedPower - naturalCapacity;
+
+            html += '<div class="rec">Required cooling capacity: '+deratedPower.toFixed(1)+' W</div>';
+            html += '<div class="detail">';
+            html += 'Required surface area for natural convection (~'+coeffNatural+' W/m²·K): <strong>'+requiredArea.toFixed(2)+' m²</strong>';
+
+            if (cabinetArea > 0) {
+                html += '<br><br>';
+                html += '<strong>Cabinet surface area: '+cabinetArea.toFixed(2)+' m²</strong> (' + formatDimensions(cab) + ')';
+                html += '<br>Natural convection capacity: <strong>'+naturalCapacity.toFixed(1)+' W</strong>';
+
+                if (deficit <= 0) {
+                    html += '<br><span style="color:var(--success);font-weight:700;">✅ Natural convection is SUFFICIENT</span>';
+                    html += ' — margin: '+Math.abs(deficit).toFixed(1)+' W';
+                } else {
+                    html += '<br><span style="color:var(--danger);font-weight:700;">⚠️ Natural convection is NOT sufficient</span>';
+                    html += ' — deficit: <strong>'+deficit.toFixed(1)+' W</strong>';
+                    html += '<br>Additional cooling required: fan unit or cabinet air conditioner rated at minimum <strong>'+Math.ceil(deficit / 10) * 10+' W</strong>';
+                }
+            } else {
+                html += '<br><em>Enter cabinet dimensions above to compare with available surface area.</em>';
+            }
+
+            html += '</div>';
+        }
+        html += '</div></div>';
+        return html;
+    }
+
+    function renderTable(rows, section) {
+        let html = '<table class="comp-table">';
+        html += '<thead><tr>';
+        html += '<th class="col-ref">Reference</th>';
+        html += '<th class="col-comp">Component</th>';
+        html += '<th class="col-num">Qty</th>';
+        html += '<th class="col-num">Loss/Unit (W)</th>';
+        html += '<th class="col-total">Total (W)</th>';
+        html += '<th class="col-actions"></th>';
+        html += '</tr></thead><tbody>';
+
+        rows.forEach((row, i) => {
+            const total = row.qty * row.loss;
+            html += '<tr>';
+            html += '<td class="col-ref"><input type="text" value="'+escapeAttr(row.ref)+'" onchange="updateRow(\''+section+'\','+i+',\'ref\',this.value)"></td>';
+            html += '<td class="col-comp"><input type="text" value="'+escapeAttr(row.name)+'" onchange="updateRow(\''+section+'\','+i+',\'name\',this.value)"></td>';
+            html += '<td class="col-num"><input type="number" min="0" value="'+row.qty+'" onchange="updateRow(\''+section+'\','+i+',\'qty\',parseFloat(this.value)||0)"></td>';
+            html += '<td class="col-num"><input type="number" min="0" step="0.1" value="'+row.loss+'" onchange="updateRow(\''+section+'\','+i+',\'loss\',parseFloat(this.value)||0)"></td>';
+            html += '<td class="total-cell'+(total === 0 ? ' zero' : '')+'">'+total.toFixed(1)+'</td>';
+            html += '<td class="col-actions"><button class="row-delete" onclick="deleteRow(\''+section+'\','+i+')" title="Remove">🗑️</button></td>';
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        return html;
+    }
+
+    function renderProjectSummary() {
+        const card = document.getElementById('projectSummaryCard');
+        if (cabinets.length === 0) { card.style.display = 'none'; return; }
+        card.style.display = 'block';
+
+        let totalAll = 0;
+        let deratedAll = 0;
+        let html = '<table class="project-table">';
+        html += '<thead><tr><th>Cabinet</th><th>Dimensions</th><th class="num">Area (m²)</th><th class="num">Power (W)</th><th class="num">Control (W)</th><th class="num">Total (W)</th><th class="num">Derating</th><th class="num">Derated (W)</th><th class="num">Cooling</th></tr></thead><tbody>';
+
+        cabinets.forEach(cab => {
+            const pt = sumSection(cab.powerRows);
+            const ct = sumSection(cab.controlRows);
+            const gt = pt + ct;
+            const dr = gt * (cab.derating / 100);
+            totalAll += gt;
+            deratedAll += dr;
+            const area = calcCabinetArea(cab);
+            const deltaT = (cab.maxTemp || 55) - (cab.ambientTemp || 35);
+            const natCap = deltaT > 0 && area > 0 ? 5.5 * area * deltaT : 0;
+            const sufficient = dr <= 0 || natCap >= dr;
+            html += '<tr>';
+            html += '<td>'+escapeHtml(cab.name)+'</td>';
+            html += '<td>'+escapeHtml(formatDimensions(cab))+'</td>';
+            html += '<td class="num">'+(area > 0 ? area.toFixed(2) : '—')+'</td>';
+            html += '<td class="num">'+pt.toFixed(1)+'</td>';
+            html += '<td class="num">'+ct.toFixed(1)+'</td>';
+            html += '<td class="num">'+gt.toFixed(1)+'</td>';
+            html += '<td class="num">'+cab.derating+'%</td>';
+            html += '<td class="num" style="font-weight:700;color:var(--primary)">'+dr.toFixed(1)+'</td>';
+            html += '<td class="num" style="font-weight:700;color:'+(sufficient?'var(--success)':'var(--danger)')+'">'+(dr <= 0 ? '—' : sufficient ? '✅ OK' : '⚠️ Fan/AC')+'</td>';
+            html += '</tr>';
+        });
+
+        html += '<tr style="border-top:2px solid #86efac">';
+        html += '<td colspan="5"><strong>Project Total</strong></td>';
+        html += '<td class="num">'+totalAll.toFixed(1)+'</td>';
+        html += '<td class="num"></td>';
+        html += '<td class="num" style="color:var(--success)">'+deratedAll.toFixed(1)+'</td>';
+        html += '<td></td>';
+        html += '</tr>';
+        html += '</tbody></table>';
+
+        document.getElementById('projectSummary').innerHTML = html;
+    }
+
+    function renderLibraryGrid() {
+        const grid = document.getElementById('libraryGrid');
+        grid.innerHTML = '';
+        componentLibrary.forEach((item, i) => {
+            const div = document.createElement('div');
+            div.className = 'library-item';
+            div.innerHTML =
+                '<div><span class="lib-name">'+escapeHtml(item.name)+'</span><br>' +
+                '<span class="lib-loss">'+escapeHtml(item.ref)+' · '+item.loss+' W · '+item.cat+'</span></div>' +
+                '<button class="lib-add" onclick="addFromLibrary('+i+')">Add</button>';
+            grid.appendChild(div);
+        });
+    }
+
+    function renderLibraryManager() {
+        const container = document.getElementById('libraryManagerContent');
+        let html = '<table class="lib-manage-table">';
+        html += '<thead><tr><th>Category</th><th>Reference</th><th>Name</th><th>Loss (W)</th><th></th></tr></thead><tbody>';
+        componentLibrary.forEach((item, i) => {
+            html += '<tr>';
+            html += '<td><select onchange="componentLibrary['+i+'].cat=this.value;saveLibrary();"><option value="power"'+(item.cat==='power'?' selected':'')+'>Power</option><option value="control"'+(item.cat==='control'?' selected':'')+'>Control</option></select></td>';
+            html += '<td><input value="'+escapeAttr(item.ref)+'" onchange="componentLibrary['+i+'].ref=this.value;saveLibrary();"></td>';
+            html += '<td><input value="'+escapeAttr(item.name)+'" onchange="componentLibrary['+i+'].name=this.value;saveLibrary();"></td>';
+            html += '<td><input type="number" step="0.1" value="'+item.loss+'" onchange="componentLibrary['+i+'].loss=parseFloat(this.value)||0;saveLibrary();"></td>';
+            html += '<td><button class="row-delete" onclick="removeLibraryItem('+i+')" title="Remove">🗑️</button></td>';
+            html += '</tr>';
+        });
+        html += '</tbody></table>';
+        container.innerHTML = html;
+    }
+
+    // ===================== ACTIONS =====================
+
+    function addCabinet(name) {
+        cabinets.push(makeCabinet(name || 'Cabinet ' + (cabinets.length + 1)));
+        activeTab = cabinets.length - 1;
+        render();
+        showToast('🗄️ New cabinet added');
+    }
+
+    function removeCabinet(idx) {
+        if (cabinets.length <= 1) return;
+        if (!confirm('Remove cabinet "'+cabinets[idx].name+'"?')) return;
+        cabinets.splice(idx, 1);
+        if (activeTab >= cabinets.length) activeTab = cabinets.length - 1;
+        render();
+        showToast('🗑️ Cabinet removed');
+    }
+
+    function addRow(section) {
+        const cab = cabinets[activeTab];
+        const rows = section === 'power' ? cab.powerRows : cab.controlRows;
+        rows.push(makeRow('', '', 0, 0));
+        render();
+    }
+
+    function deleteRow(section, idx) {
+        const cab = cabinets[activeTab];
+        const rows = section === 'power' ? cab.powerRows : cab.controlRows;
+        rows.splice(idx, 1);
+        render();
+    }
+
+    function updateRow(section, idx, field, value) {
+        const cab = cabinets[activeTab];
+        const rows = section === 'power' ? cab.powerRows : cab.controlRows;
+        rows[idx][field] = value;
+        render();
+    }
+
+    function addFromLibrary(libIdx) {
+        const item = componentLibrary[libIdx];
+        const targetSection = document.getElementById('libTargetSection').value;
+        const cab = cabinets[activeTab];
+        const rows = targetSection === 'power' ? cab.powerRows : cab.controlRows;
+        rows.push(makeRow(item.ref, item.name, 1, item.loss));
+        render();
+        showToast('➕ Added "'+item.name+'" to '+cabinets[activeTab].name);
+    }
+
+    function addLibraryItem() {
+        componentLibrary.push({ cat: 'power', ref: '', name: 'New Component', loss: 0 });
+        saveLibrary();
+        renderLibraryManager();
+        renderLibraryGrid();
+    }
+
+    function removeLibraryItem(idx) {
+        componentLibrary.splice(idx, 1);
+        saveLibrary();
+        renderLibraryManager();
+        renderLibraryGrid();
+    }
+
+    function resetLibraryDefaults() {
+        if (!confirm('Reset library to default components?')) return;
+        componentLibrary = JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
+        saveLibrary();
+        renderLibraryManager();
+        renderLibraryGrid();
+        showToast('📚 Library reset to defaults');
+    }
+
+    function toggleLibrary() {
+        document.getElementById('libraryPanel').classList.toggle('open');
+        document.getElementById('libraryManagerPanel').classList.remove('open');
+    }
+
+    function toggleLibraryManager() {
+        const panel = document.getElementById('libraryManagerPanel');
+        panel.classList.toggle('open');
+        document.getElementById('libraryPanel').classList.remove('open');
+        if (panel.classList.contains('open')) renderLibraryManager();
+    }
+
+    // ===================== CALCULATIONS =====================
+
+    function sumSection(rows) {
+        return rows.reduce((s, r) => s + (r.qty * r.loss), 0);
+    }
+
+    // ===================== JSON SAVE / LOAD =====================
+
+    function getAppState() {
+        return {
+            version: 1,
+            type: 'powerLossCalc',
+            savedAt: new Date().toISOString(),
+            projectName: document.getElementById('projectName').value,
+            projectNote: document.getElementById('projectNote').value,
+            cabinets: cabinets,
+            library: componentLibrary
+        };
+    }
+
+    function applyAppState(state) {
+        if (!state || state.type !== 'powerLossCalc') throw new Error('Invalid file');
+        document.getElementById('projectName').value = state.projectName || '';
+        document.getElementById('projectNote').value = state.projectNote || '';
+        cabinets = (state.cabinets || []).map(c => ({
+            id: c.id || Date.now() + Math.random(),
+            name: c.name || 'Cabinet',
+            width: c.width || 0,
+            height: c.height || 0,
+            depth: c.depth || 0,
+            derating: c.derating || 80,
+            ambientTemp: c.ambientTemp || 35,
+            maxTemp: c.maxTemp || 55,
+            powerRows: (c.powerRows || []).map(r => makeRow(r.ref, r.name, r.qty, r.loss)),
+            controlRows: (c.controlRows || []).map(r => makeRow(r.ref, r.name, r.qty, r.loss)),
+        }));
+        if (state.library) {
+            componentLibrary = state.library;
+            saveLibrary();
+        }
+        if (cabinets.length === 0) cabinets = [makeCabinet('Cabinet 1')];
+        activeTab = 0;
+        render();
+    }
+
+    function saveJson() {
+        const state = getAppState();
+        const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const name = document.getElementById('projectName').value.trim() || 'power_loss';
+        a.download = name.replace(/[\\/:*?"<>|]/g, '_') + '.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('🧾 Project saved!');
+    }
+
+    function triggerJsonLoad() {
+        document.getElementById('jsonFileInput').click();
+    }
+
+    document.getElementById('jsonFileInput').addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(ev) {
+            try {
+                const state = JSON.parse(ev.target.result);
+                applyAppState(state);
+                showToast('📂 Project loaded!');
+            } catch(err) {
+                showToast('⚠️ Failed to load file: ' + err.message);
+            }
+        };
+        reader.readAsText(file, 'utf-8');
+        e.target.value = '';
+    });
+
+    // ===================== EXCEL EXPORT =====================
+
+    async function exportExcel() {
+        if (typeof ExcelJS === 'undefined') {
+            showToast('⚠️ ExcelJS library not loaded'); return;
+        }
+
+        const wb = new ExcelJS.Workbook();
+        const projectName = document.getElementById('projectName').value.trim() || 'Power Loss';
+
+        cabinets.forEach(cab => {
+            const sheetName = cab.name.substring(0, 31).replace(/[\\/:*?\[\]]/g, '_');
+            const ws = wb.addWorksheet(sheetName);
+
+            ws.columns = [
+                { key: 'ref', width: 14 },
+                { key: 'comp', width: 34 },
+                { key: 'qty', width: 10 },
+                { key: 'lossUnit', width: 16 },
+                { key: 'lossTotal', width: 16 },
+            ];
+
+            // Header
+            const headerRow = ws.addRow(['Reference', 'Component', 'Qty', 'Loss/Unit (W)', 'Total Loss (W)']);
+            headerRow.font = { bold: true };
+            headerRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } }; });
+
+            // Power section header
+            const powerHeader = ws.addRow(['Power Section (230/400 V)', '', '', '', '']);
+            ws.mergeCells(powerHeader.number, 1, powerHeader.number, 5);
+            powerHeader.getCell(1).font = { bold: true, size: 11 };
+            powerHeader.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+
+            // Power rows
+            let powerTotal = 0;
+            cab.powerRows.forEach(r => {
+                const total = r.qty * r.loss;
+                powerTotal += total;
+                ws.addRow([r.ref, r.name, r.qty, r.loss, total]);
+            });
+            const ptRow = ws.addRow(['', '', '', 'Subtotal:', powerTotal]);
+            ptRow.getCell(4).font = { bold: true };
+            ptRow.getCell(5).font = { bold: true };
+
+            // Control section header
+            const ctrlHeader = ws.addRow(['Control Section (24 V)', '', '', '', '']);
+            ws.mergeCells(ctrlHeader.number, 1, ctrlHeader.number, 5);
+            ctrlHeader.getCell(1).font = { bold: true, size: 11 };
+            ctrlHeader.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+
+            // Control rows
+            let ctrlTotal = 0;
+            cab.controlRows.forEach(r => {
+                const total = r.qty * r.loss;
+                ctrlTotal += total;
+                ws.addRow([r.ref, r.name, r.qty, r.loss, total]);
+            });
+            const ctRow = ws.addRow(['', '', '', 'Subtotal:', ctrlTotal]);
+            ctRow.getCell(4).font = { bold: true };
+            ctRow.getCell(5).font = { bold: true };
+
+            // Grand total
+            ws.addRow([]);
+            const grandTotal = powerTotal + ctrlTotal;
+            const derated = grandTotal * (cab.derating / 100);
+            const gtRow = ws.addRow(['', '', '', 'Total (100%):', grandTotal]);
+            gtRow.getCell(4).font = { bold: true };
+            gtRow.getCell(5).font = { bold: true };
+            const drRow = ws.addRow(['', '', '', cab.derating + '% of total:', derated]);
+            drRow.getCell(4).font = { bold: true, color: { argb: 'FF2563EB' } };
+            drRow.getCell(5).font = { bold: true, color: { argb: 'FF2563EB' } };
+
+            // Number format for loss columns
+            ws.eachRow(row => {
+                [3,4,5].forEach(col => {
+                    const cell = row.getCell(col);
+                    if (typeof cell.value === 'number') {
+                        cell.numFmt = '#,##0.0';
+                        cell.alignment = { horizontal: 'right' };
+                    }
+                });
+            });
+        });
+
+        // Summary sheet
+        if (cabinets.length > 1) {
+            const summary = wb.addWorksheet('Summary');
+            summary.columns = [
+                { key: 'name', width: 24 },
+                { key: 'size', width: 20 },
+                { key: 'power', width: 14 },
+                { key: 'ctrl', width: 14 },
+                { key: 'total', width: 14 },
+                { key: 'derate', width: 12 },
+                { key: 'derated', width: 16 },
+            ];
+            const hRow = summary.addRow(['Cabinet', 'Size', 'Power (W)', 'Control (W)', 'Total (W)', 'Derating', 'Derated (W)']);
+            hRow.font = { bold: true };
+
+            let allTotal = 0, allDerated = 0;
+            cabinets.forEach(cab => {
+                const pt = sumSection(cab.powerRows);
+                const ct = sumSection(cab.controlRows);
+                const gt = pt + ct;
+                const dr = gt * (cab.derating / 100);
+                allTotal += gt;
+                allDerated += dr;
+                summary.addRow([cab.name, formatDimensions(cab), pt, ct, gt, cab.derating + '%', dr]);
+            });
+            const totRow = summary.addRow(['TOTAL', '', '', '', allTotal, '', allDerated]);
+            totRow.font = { bold: true };
+        }
+
+        const buffer = await wb.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        const fname = (document.getElementById('projectName').value.trim() || 'power_loss_calculation').replace(/[\\/:*?"<>|]/g, '_');
+        a.download = fname + '.xlsx';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast('📊 Excel exported!');
+    }
+
+    // ===================== COPY SUMMARY =====================
+
+    function copyProjectSummary() {
+        let text = 'Power Loss Calculation Summary\n';
+        text += '==============================\n';
+        const pName = document.getElementById('projectName').value.trim();
+        if (pName) text += 'Project: ' + pName + '\n';
+        text += '\n';
+
+        let allTotal = 0, allDerated = 0;
+        cabinets.forEach(cab => {
+            const pt = sumSection(cab.powerRows);
+            const ct = sumSection(cab.controlRows);
+            const gt = pt + ct;
+            const dr = gt * (cab.derating / 100);
+            allTotal += gt;
+            allDerated += dr;
+            const dims = formatDimensions(cab);
+            text += cab.name + (dims !== '—' ? ' (' + dims + ')' : '') + '\n';
+            text += '  Power:   ' + pt.toFixed(1) + ' W\n';
+            text += '  Control: ' + ct.toFixed(1) + ' W\n';
+            text += '  Total:   ' + gt.toFixed(1) + ' W\n';
+            text += '  Derated (' + cab.derating + '%): ' + dr.toFixed(1) + ' W\n\n';
+        });
+
+        text += '------------------------------\n';
+        text += 'Project Total:  ' + allTotal.toFixed(1) + ' W\n';
+        text += 'Project Derated: ' + allDerated.toFixed(1) + ' W\n';
+
+        navigator.clipboard.writeText(text).then(() => showToast('📋 Summary copied!'));
+    }
+
+    // ===================== CLEAR =====================
+
+    function clearAll() {
+        if (!confirm('Clear all cabinets and start fresh?')) return;
+        cabinets = [makeCabinet('Cabinet 1')];
+        activeTab = 0;
+        document.getElementById('projectName').value = '';
+        document.getElementById('projectNote').value = '';
+        render();
+        showToast('🗑️ All cleared!');
+    }
+
+    // ===================== HELPERS =====================
+
+    function escapeHtml(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    function escapeAttr(str) {
+        return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.textContent = msg;
+        t.classList.add('show');
+        setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    // ===================== INIT =====================
+    render();
+    </script>
+</body>
+</html>

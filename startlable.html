@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Marking – All Types</title>
+    <style>
+        :root {
+            --bg: #f0f2f5;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --tab-bg: #ffffff;
+            --active-shadow: 0 2px 8px rgba(37,99,235,.25);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        html, body { height: 100%; overflow: hidden; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ─── Top bar ─── */
+        .topbar {
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            padding: 0 16px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            height: 56px;
+            flex-shrink: 0;
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+        }
+        .topbar-title {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--primary);
+            margin-right: 16px;
+            white-space: nowrap;
+        }
+
+        /* ─── Tabs ─── */
+        .tabs {
+            display: flex;
+            gap: 4px;
+            flex: 1;
+            overflow-x: auto;
+        }
+        .tab {
+            padding: 10px 20px;
+            border: none;
+            background: transparent;
+            color: var(--text-light);
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 8px 8px 0 0;
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            white-space: nowrap;
+            position: relative;
+        }
+        .tab:hover {
+            background: #f1f5f9;
+            color: var(--text);
+        }
+        .tab.active {
+            background: var(--primary);
+            color: #fff;
+            box-shadow: var(--active-shadow);
+        }
+        .tab .tab-icon { font-size: 1.15rem; }
+        .tab .tab-shortcut {
+            font-size: 0.7rem;
+            opacity: 0.6;
+            font-weight: 400;
+            border: 1px solid currentColor;
+            border-radius: 3px;
+            padding: 0 4px;
+            line-height: 1.5;
+        }
+
+        /* ─── Keyboard hint ─── */
+        .kb-hint {
+            font-size: 0.75rem;
+            color: var(--text-light);
+            white-space: nowrap;
+            margin-left: auto;
+        }
+
+        /* ─── Content area ─── */
+        .content {
+            flex: 1;
+            position: relative;
+        }
+        .content iframe {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+        .content iframe.active {
+            display: block;
+        }
+
+        @media (max-width: 700px) {
+            .topbar { padding: 0 8px; height: 48px; }
+            .topbar-title { font-size: 0.95rem; margin-right: 8px; }
+            .tab { padding: 8px 12px; font-size: 0.82rem; }
+            .tab .tab-shortcut { display: none; }
+            .kb-hint { display: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="topbar">
+    <span class="topbar-title">🏷️ Marking</span>
+    <div class="tabs" id="tabs">
+        <button class="tab active" data-target="frame-device" onclick="switchTab(this)">
+            <span class="tab-icon">🏷️</span> Device Labels
+            <span class="tab-shortcut">1</span>
+        </button>
+        <button class="tab" data-target="frame-kabel" onclick="switchTab(this)">
+            <span class="tab-icon">⚡</span> Cable Marking
+            <span class="tab-shortcut">2</span>
+        </button>
+        <button class="tab" data-target="frame-part" onclick="switchTab(this)">
+            <span class="tab-icon">🔧</span> Conductor Marking
+            <span class="tab-shortcut">3</span>
+        </button>
+        <button class="tab" data-target="frame-plint" onclick="switchTab(this)">
+            <span class="tab-icon">🔌</span> Terminal Marking
+            <span class="tab-shortcut">4</span>
+        </button>
+    </div>
+    <span class="kb-hint">Created by Henrik Alexanderson</span>
+</div>
+
+<div class="content" id="content">
+    <iframe id="frame-device" class="active" src="device-label.html"></iframe>
+    <iframe id="frame-kabel" src="kabelmarkning.html"></iframe>
+    <iframe id="frame-part" src="partmarkning.html"></iframe>
+    <iframe id="frame-plint" src="plintmarkning.html"></iframe>
+</div>
+
+<script>
+    function switchTab(tabBtn) {
+        // Deactivate all tabs and frames
+        document.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
+        document.querySelectorAll('.content iframe').forEach(function(f) { f.classList.remove('active'); });
+
+        // Activate selected
+        tabBtn.classList.add('active');
+        var targetId = tabBtn.getAttribute('data-target');
+        document.getElementById(targetId).classList.add('active');
+
+        // Remember choice
+        try { localStorage.setItem('marking-active-tab', targetId); } catch(e) {}
+    }
+
+    // Keyboard shortcut: Alt+1 through Alt+4
+    document.addEventListener('keydown', function(e) {
+        if (e.altKey && e.key >= '1' && e.key <= '4') {
+            e.preventDefault();
+            var index = parseInt(e.key) - 1;
+            var tabs = document.querySelectorAll('.tab');
+            if (tabs[index]) {
+                switchTab(tabs[index]);
+            }
+        }
+    });
+
+    // Restore last active tab
+    (function() {
+        try {
+            var saved = localStorage.getItem('marking-active-tab');
+            if (saved && document.getElementById(saved)) {
+                var tab = document.querySelector('.tab[data-target="' + saved + '"]');
+                if (tab) switchTab(tab);
+            }
+        } catch(e) {}
+    })();
+</script>
+
+</body>
+</html>

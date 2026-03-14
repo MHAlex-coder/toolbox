@@ -1,0 +1,595 @@
+<!DOCTYPE html>
+<html lang="sv" xmlns:mso="urn:schemas-microsoft-com:office:office" xmlns:msdt="uuid:C2F41010-65B3-11d1-A29F-00AA00C14882">
+<head>
+    <meta charset="UTF-8">
+    <title>Effektberäkning för Förbrukare</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #0078d4;
+            --hover-blue: #005fa3;
+            --bg-gray: #f8f9fa;
+            --border-color: #dee2e6;
+            --intermittent-blue: #eaf6ff;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: var(--bg-gray);
+            color: #333;
+        }
+
+        .container {
+            max-width: 2000px;
+            margin: auto;
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .no-print { display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px; }
+        .controls { display: flex; gap: 15px; align-items: center; }
+        
+        input[type="text"], input[type="number"], select { 
+            padding: 8px; 
+            border: 1px solid var(--border-color); 
+            border-radius: 6px; 
+            font-size: 11px;
+        }
+
+        .modern-btn {
+            background: var(--primary-blue);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .modern-btn:hover { background: var(--hover-blue); }
+        .btn-green { background: #28a745; }
+
+        .table-wrapper { overflow-x: auto; }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th {
+            background: #f1f3f5;
+            padding: 12px 5px;
+            border: 1px solid var(--border-color);
+            font-weight: 600;
+            font-size: 11px;
+        }
+        td {
+            padding: 6px;
+            border: 1px solid var(--border-color);
+            text-align: center;
+        }
+
+        .col-peak { background-color: var(--intermittent-blue); font-weight: 600; }
+        .res-val { font-weight: 600; background: #fafafa; }
+
+        .summary-box {
+            margin-top: 30px;
+            padding: 25px;
+            background: #fdfdfd;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            display: inline-block;
+            min-width: 550px;
+        }
+        .summary-table { width: 100%; border: none; }
+        .summary-table th { text-align: left; padding: 8px 15px; font-size: 13px; border: none; background: none; }
+        .summary-table td { text-align: right; padding: 8px 15px; font-weight: 700; font-size: 1.2em; border: none; }
+        .highlight-fuse { color: #d32f2f; }
+        .pf-unit { font-size: 0.68em; font-weight: 600; color: #54606e; margin-left: 8px; white-space: nowrap; }
+
+        .btn-delete {
+            background: none; border: none; cursor: pointer; color: #999; font-size: 16px; padding: 4px 6px; border-radius: 4px; transition: color 0.2s;
+        }
+        .btn-delete:hover { color: #d32f2f; }
+
+        .logo-wrapper {
+            position: absolute;
+            top: 0;
+            right: 0;
+        }
+        .logo-wrapper img {
+            max-height: 80px;
+            max-width: 200px;
+            object-fit: contain;
+        }
+
+        @media print {
+            .no-print, .lang-selector { display: none !important; }
+            .col-delete { display: none !important; }
+            .container { box-shadow: none; max-width: 100%; padding: 0; }
+            body { background: white; }
+            .no-print { display: none !important; }
+            .logo-wrapper img {
+                max-height: 90px;
+                max-width: 220px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+
+<div class="container">
+    <div style="margin-bottom: 10px; position: relative;">
+        <h1 id="mainTitle">Effektberäkning för Förbrukare</h1>
+        <div id="projPrint" style="font-size:1.1em; margin-bottom:8px;"><b id="lblProj">Projekt:</b> <span id="projPrintVal"></span></div>
+        <div class="logo-wrapper" id="logoWrapper" style="display:none;">
+            <img id="logoImg" src="" alt="Logotyp">
+        </div>
+    </div>
+    <div class="lang-selector" style="text-align: right; margin-bottom: 10px;">
+        <label><b id="lblLang">Språk:</b></label>
+        <select id="langSwitcher" onchange="changeLanguage()" style="width: auto;">
+            <option value="sv">Svenska</option>
+            <option value="en">English</option>
+        </select>
+    </div>
+    <div class="no-print">
+        <div class="controls">
+            <input type="text" id="projInput" placeholder="Ange projektnamn..." oninput="document.getElementById('projPrintVal').textContent = this.value">
+            <button class="modern-btn" onclick="exportToJson()">Exportera JSON</button>
+            <input type="file" id="importJsonInput" style="display:none" accept="application/json" onchange="importFromJson(event)">
+            <button class="modern-btn" onclick="document.getElementById('importJsonInput').click()">Importera JSON</button>
+            <label id="lblEarthing" for="earthingSelect">Jordningssystem:</label>
+            <select id="earthingSelect" onchange="calculate()">
+                <option value="TN-S">TN-S</option>
+                <option value="TN-C">TN-C</option>
+                <option value="IT">IT</option>
+            </select>
+            <label id="lblPhase" for="phaseSelect">Fassystem:</label>
+            <select id="phaseSelect" onchange="calculate()">
+                <option value="3N+PE">3N+PE</option>
+                <option value="1-fas">1-fas</option>
+            </select>
+            <label id="lblFuseMargin" for="fuseMarginInput">Säkerhetsmarginal (%)</label>
+            <input type="number" id="fuseMarginInput" value="15" min="0" max="100" step="1" style="width:60px;" oninput="calculate()">
+            <button class="modern-btn" id="btnPrint" onclick="window.print()">Skriv ut</button>
+            <input type="file" id="logoInput" style="display:none" accept="image/*" onchange="handleLogoUpload(event)">
+            <button class="modern-btn" id="btnLogo" onclick="document.getElementById('logoInput').click()">Välj logotyp</button>
+            <button class="modern-btn" id="btnRemoveLogo" onclick="removeLogo()" style="display:none;background:#dc3545;">Ta bort logotyp</button>
+            <button class="modern-btn btn-green" id="btnAddRow" onclick="addRow()">Lägg till rad</button>
+        </div>
+    </div>
+
+    <div class="table-wrapper">
+        <table id="mainTable">
+            <thead>
+                <tr id="tableHeader">
+                    <th data-key="thFunktion">Funktion</th>
+                    <th data-key="thAntal">Antal</th>
+                    <th data-key="thEffekt">Effekt (kW)</th>
+                    <th data-key="thLast">Last (%)</th>
+                    <th data-key="thCos">cos φ</th>
+                    <th data-key="thEff">Verkningsgrad</th>
+                    <th data-key="thVFD">VFD</th>
+                    <th data-key="thSim">Samtidighet (%)</th>
+                    <th data-key="thVolt">Spänning (V)</th>
+                    <th data-key="thFas">Fas</th>
+                    <th class="res-val" data-key="thStr">Ström (A)</th>
+                    <th class="res-val" data-key="thAkt">Aktiv (kW)</th>
+                    <th class="res-val" data-key="thSken">Skenbar (kVA)</th>
+                    <th class="col-peak" data-key="thIntStr">Int. Ström (100%)</th>
+                    <th class="col-peak" data-key="thIntAkt">Int. Aktiv (100%)</th>
+                    <th class="col-peak" data-key="thIntSken">Int. Skenbar (100%)</th>
+                    <th class="col-delete"></th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+                <tr>
+                    <td><input type="text" value="Motor 1"></td>
+                    <td><input type="number" class="antal" value="1" oninput="calculate()"></td>
+                    <td><input type="number" class="kw" value="1.5" step="0.1" oninput="calculate()"></td>
+                    <td><input type="number" class="last" value="100" oninput="calculate()"></td>
+                    <td><input type="number" class="cos" value="0.85" step="0.01" oninput="calculate()"></td>
+                    <td><input type="number" class="eff" value="0.90" step="0.01" oninput="calculate()"></td>
+                    <td>
+                        <select class="vfd" onchange="toggleVfd(this)">
+                            <option value="nej">Nej</option>
+                            <option value="ja">Ja</option>
+                        </select>
+                    </td>
+                    <td><input type="number" class="sim" value="100" min="0" max="100" step="1" oninput="calculate()"></td>
+                    <td><input type="number" class="volt" value="400" oninput="calculate()"></td>
+                    <td>
+                        <select class="fas" onchange="calculate()">
+                            <option value="3">3-fas</option>
+                            <option value="1">1-fas</option>
+                        </select>
+                    </td>
+                    <td class="res-a res-val">-</td>
+                    <td class="res-p res-val">-</td>
+                    <td class="res-s res-val">-</td>
+                    <td class="res-ia col-peak">-</td>
+                    <td class="res-ip col-peak">-</td>
+                    <td class="res-is col-peak">-</td>
+                    <td class="col-delete"><button class="btn-delete" onclick="deleteRow(this)" title="Ta bort rad">&#128465;</button></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+        <div class="summary-formula-row" style="display: flex; gap: 40px; align-items: flex-start;">
+            <div class="summary-box" style="margin-top:0;">
+        <h3 id="sumTitle">Total sammanställning</h3>
+        <table class="summary-table">
+            <tr><th id="sumNom">Total Nominell Ström:</th><td><span id="totalA">0.00</span> A</td></tr>
+            <tr><th id="sumAkt">Total Aktiv Effekt:</th><td><span id="totalP">0.00</span> kW</td></tr>
+            <tr><th id="sumSken">Total Skenbar Effekt:</th><td><span id="totalS">0.00</span> kVA</td></tr>
+            <tr style="border-top: 1px solid #ddd;"><th id="sumPeak">Total Intermitent ström:</th><td><span id="totalAPeak">0.00</span> A</td></tr>
+                <tr><th id="sumFuse">Föreslagen Huvudsäkring (+15%):</th><td><span id="fuse" class="highlight-fuse">0</span> A</td></tr>
+            <tr><th id="earthingRow">Jordningssystem:</th><td id="earthingValCell"></td></tr>
+            <tr><th id="phaseRow">Fassystem:</th><td id="phaseValCell"></td></tr>
+                    <tr>
+                        <th id="totalPFLabel">Total Effektfaktor (λ PF):</th>
+                        <td><span id="totalPFVal" class="bold-text">0.00</span><span id="totalPFUnit" class="pf-unit">λ PF (Total Power Factor)</span></td>
+                    </tr>
+        </table>
+            </div>
+            <div id="formula-box" style="min-width:350px; max-width:500px; background:#f8f9fa; border-radius:8px; border:1px solid #dee2e6; padding:24px 28px; margin-top:0;">
+        <h3 id="formulaTitle">Beräkningsformler</h3>
+        <div id="formulas"></div>
+            </div>
+        </div>
+</div>
+
+<script>
+            const formulasSv = [
+                { label: "Aktiv effekt (P)", formula: "P = (n_sim × kW × Last) / Verkningsgrad, där n_sim = Antal × (Samtidighet / 100)" },
+                { label: "Skenbar effekt (S)", formula: "S = P / (cos φ eller 0,90 om VFD)" },
+                { label: "Förtydligande VFD", formula: "Vid VFD = Ja antas effektiv effektfaktor ca 0,90. Exempel: cos φ = 0,97 och THDi = 40 % ger 0,97 × 1/√(1 + 0,40²) ≈ 0,90. Detta är endast information i formelsamlingen och en separat THDi-beräkning görs inte." },
+                { label: "Ström (I)", formula: "I = (S × 1000) / (U × √3) för 3-fas, eller I = (S × 1000) / U för 1-fas" },
+                { label: "Toppvärden (100%)", formula: "Alla toppvärden (Int. Ström, Int. Aktiv, Int. Skenbar) beräknas med hela antalet (Antal), oavsett Samtidighet." },
+                { label: "Toppvärde Aktiv effekt (P_int)", formula: "P_int = (Antal × kW × Last) / Verkningsgrad" },
+                { label: "Toppvärde Skenbar effekt (S_int)", formula: "S_int = P_int / (cos φ eller 0,90 om VFD)" },
+                { label: "Toppvärde Ström (I_int)", formula: "I_int = (S_int × 1000) / (U × √3) för 3-fas, eller I_int = (S_int × 1000) / U för 1-fas" },
+                { label: "Säkring", formula: "Säkring = Total toppström × (1 + säkerhetsmarginal / 100), avrundat uppåt till närmaste standardvärde" }
+];
+const formulasEn = [
+                { label: "Active Power (P)", formula: "P = (n_sim × kW × Load) / Efficiency, where n_sim = Qty × (Simultaneity / 100)" },
+                { label: "Apparent Power (S)", formula: "S = P / (cos φ or 0.90 if VFD)" },
+                { label: "VFD clarification", formula: "When VFD = Yes, an effective power factor of about 0.90 is assumed. Example: cos φ = 0.97 and THDi = 40% gives 0.97 × 1/√(1 + 0.40²) ≈ 0.90. This is informational in the formula list only and no separate THDi calculation is performed." },
+                { label: "Current (I)", formula: "I = (S × 1000) / (U × √3) for 3-phase, or I = (S × 1000) / U for 1-phase" },
+                { label: "Peak values (100%)", formula: "All peak values (Int. Current, Int. Active, Int. Apparent) are calculated with full quantity (Qty), regardless of Simultaneity." },
+                { label: "Peak Active Power (P_int)", formula: "P_int = (Qty × kW × Load) / Efficiency" },
+                { label: "Peak Apparent Power (S_int)", formula: "S_int = P_int / (cos φ or 0.90 if VFD)" },
+                { label: "Peak Current (I_int)", formula: "I_int = (S_int × 1000) / (U × √3) for 3-phase, or I_int = (S_int × 1000) / U for 1-phase" },
+                { label: "Fuse", formula: "Fuse = Total peak current × (1 + safety margin / 100), rounded up to nearest standard value" }
+];
+
+            function renderFormulas() {
+                const lang = document.getElementById('langSwitcher')?.value || 'sv';
+                const formulas = lang === 'en' ? formulasEn : formulasSv;
+                document.getElementById('formulaTitle').textContent = lang === 'en' ? 'Calculation formulas' : 'Beräkningsformler';
+                document.getElementById('formulas').innerHTML = formulas.map(f => `<b>${f.label}:</b><br><span style='font-family:monospace;'>${f.formula}</span><br><br>`).join('');
+            }
+
+            // Kör vid språkbyte och sidladdning
+            document.addEventListener('DOMContentLoaded', renderFormulas);
+            document.getElementById('langSwitcher').addEventListener('change', renderFormulas);
+        function exportToJson() {
+            // Samla in data
+            const project = document.getElementById('projInput').value;
+            const earthing = document.getElementById('earthingSelect').value;
+            const phase = document.getElementById('phaseSelect').value;
+            const rows = Array.from(document.querySelectorAll('#tableBody tr')).map(row => ({
+                funktion: row.querySelector('input[type="text"]').value,
+                antal: row.querySelector('.antal').value,
+                kw: row.querySelector('.kw').value,
+                last: row.querySelector('.last').value,
+                cos: row.querySelector('.cos').value,
+                eff: row.querySelector('.eff').value,
+                vfd: row.querySelector('.vfd').value,
+                sim: row.querySelector('.sim') ? row.querySelector('.sim').value : '100',
+                volt: row.querySelector('.volt').value,
+                fas: row.querySelector('.fas').value
+            }));
+            const fuseMargin = document.getElementById('fuseMarginInput')?.value || '15';
+            const data = { project, earthing, phase, fuseMargin, rows };
+            const json = JSON.stringify(data, null, 2);
+            const blob = new Blob([json], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = (project ? project + '_' : '') + 'effektdata.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function importFromJson(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = JSON.parse(e.target.result);
+                    // Återställ projekt, jordning, fas
+                    document.getElementById('projInput').value = data.project || '';
+                    // Use valid defaults that exist in selects
+                    document.getElementById('earthingSelect').value = data.earthing || 'TN-S';
+                    document.getElementById('phaseSelect').value = data.phase || '3N+PE';
+                    // Återställ säkerhetsmarginal
+                    if (data.fuseMargin !== undefined && document.getElementById('fuseMarginInput')) {
+                        document.getElementById('fuseMarginInput').value = data.fuseMargin;
+                    }
+                    // Rensa tabell
+                    const tbody = document.getElementById('tableBody');
+                    while (tbody.rows.length > 0) tbody.deleteRow(0);
+                    // Lägg till rader
+                    (data.rows || []).forEach(row => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td><input type="text" value="${row.funktion || ''}"></td>
+                            <td><input type="number" class="antal" value="${row.antal || ''}" oninput="calculate()"></td>
+                            <td><input type="number" class="kw" value="${row.kw || ''}" step="0.1" oninput="calculate()"></td>
+                            <td><input type="number" class="last" value="${row.last || ''}" oninput="calculate()"></td>
+                            <td><input type="number" class="cos" value="${row.cos || ''}" step="0.01" oninput="calculate()"></td>
+                            <td><input type="number" class="eff" value="${row.eff || ''}" step="0.01" oninput="calculate()"></td>
+                            <td><select class="vfd" onchange="toggleVfd(this)"><option value="nej">Nej</option><option value="ja">Ja</option></select></td>
+                            <td><input type="number" class="sim" value="${row.sim !== undefined ? row.sim : '100'}" min="0" max="100" step="1" oninput="calculate()"></td>
+                            <td><input type="number" class="volt" value="${row.volt || ''}" oninput="calculate()"></td>
+                            <td><select class="fas" onchange="calculate()"><option value="3">3-fas</option><option value="1">1-fas</option></select></td>
+                            <td class="res-a res-val">-</td>
+                            <td class="res-p res-val">-</td>
+                            <td class="res-s res-val">-</td>
+                            <td class="res-ia col-peak">-</td>
+                            <td class="res-ip col-peak">-</td>
+                            <td class="res-is col-peak">-</td>
+                            <td class="col-delete"><button class="btn-delete" onclick="deleteRow(this)" title="Ta bort rad">&#128465;</button></td>
+                        `;
+                        tbody.appendChild(tr);
+                        // Sätt VFD och fas rätt
+                        tr.querySelector('.vfd').value = row.vfd || 'nej';
+                        tr.querySelector('.fas').value = row.fas || '3';
+                    });
+                    calculate();
+                } catch (err) {
+                    alert('Fel vid import av JSON: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+    const langData = {
+        sv: {
+            mainTitle: "Effektberäkning för Förbrukare",
+            lblLang: "Språk:", lblProj: "Projekt:", btnPrint: "Skriv ut", btnAddRow: "Lägg till rad",
+            thFunktion: "Funktion", thAntal: "Antal", thEffekt: "Effekt (kW)", thLast: "Last (%)",
+            thCos: "cos φ", thEff: "Verkningsgrad", thVFD: "VFD",
+            thSim: "Samtidighet (%)",
+            thVolt: "Spänning (V)", thFas: "Fas", thStr: "Ström (A)", thAkt: "Aktiv (kW)",
+            thSken: "Skenbar (kVA)", thIntStr: "Int. Ström (A)", thIntAkt: "Int. Aktiv (kW)", thIntSken: "Int. Skenbar (kVA)",
+            sumTitle: "Total sammanställning", sumNom: "Total Nominell Ström:", sumAkt: "Total Aktiv Effekt:",
+            sumSken: "Total Skenbar Effekt:", sumPeak: "Total Toppström:", sumFuse: "Föreslagen Huvudsäkring (+15%):",
+            earthing: "Jordningssystem:", phase: "Fassystem:",
+            lblEarthing: "Jordningssystem:", lblPhase: "Fassystem:",
+            lblFuseMargin: "Säkerhetsmarginal (%)",
+            btnLogo: "Välj logotyp",
+            btnRemoveLogo: "Ta bort logotyp",
+            sumFusePrefix: "Föreslagen Huvudsäkring (+",
+                optNo: "Nej", optYes: "Ja",
+                totalPF: "Total Effektfaktor (λ PF):",
+                totalPFUnit: "λ PF (Total Power Factor)",
+                earthing: "Jordningssystem:",
+                phase: "Fassystem:"
+        },
+        en: {
+            mainTitle: "Power Calculation for Consumers",
+            lblLang: "Language:", lblProj: "Project:", btnPrint: "Print", btnAddRow: "Add Row",
+            thFunktion: "Function", thAntal: "Qty", thEffekt: "Power (kW)", thLast: "Load (%)",
+            thCos: "cos φ", thEff: "Efficiency", thVFD: "VFD",
+            thSim: "Simultaneity (%)",
+            thVolt: "Voltage (V)", thFas: "Phase", thStr: "Current (A)", thAkt: "Active (kW)",
+            thSken: "Apparent (kVA)", thIntStr: "Int. Current (A)", thIntAkt: "Int. Active (kW)", thIntSken: "Int. Apparent (kVA)",
+            sumTitle: "Summary Table", sumNom: "Total Nominal Current:", sumAkt: "Total Active Power:",
+            sumSken: "Total Apparent Power:", sumPeak: "Total Intermittent Current:", sumFuse: "Suggested Main Fuse (+15%):",
+            earthing: "Earthing system:", phase: "Phase system:",
+            lblEarthing: "Earthing system:", lblPhase: "Phase system:",
+            lblFuseMargin: "Safety margin (%)",
+            btnLogo: "Select logo",
+            btnRemoveLogo: "Remove logo",
+            sumFusePrefix: "Suggested Main Fuse (+",
+                optNo: "No", optYes: "Yes",
+                totalPF: "Total Power Factor (λ PF):",
+                totalPFUnit: "λ PF (Total Power Factor)",
+                earthing: "Earthing system:",
+                phase: "Phase system:"
+        }
+    };
+
+    function changeLanguage() {
+
+        const lang = document.getElementById('langSwitcher').value;
+        const data = langData[lang];
+        if (document.getElementById('totalPFLabel')) document.getElementById('totalPFLabel').textContent = data.totalPF;
+        if (document.getElementById('totalPFUnit')) document.getElementById('totalPFUnit').textContent = data.totalPFUnit;
+        if (document.getElementById('earthingRow')) document.getElementById('earthingRow').textContent = data.earthing;
+        if (document.getElementById('phaseRow')) document.getElementById('phaseRow').textContent = data.phase;
+
+        document.getElementById('mainTitle').textContent = data.mainTitle;
+        document.getElementById('lblLang').textContent = data.lblLang;
+        document.getElementById('lblProj').textContent = data.lblProj;
+        document.getElementById('btnPrint').textContent = data.btnPrint;
+        document.getElementById('btnAddRow').textContent = data.btnAddRow;
+        document.getElementById('sumTitle').textContent = data.sumTitle;
+        document.getElementById('sumNom').textContent = data.sumNom;
+        document.getElementById('sumAkt').textContent = data.sumAkt;
+        document.getElementById('sumSken').textContent = data.sumSken;
+        document.getElementById('sumPeak').textContent = data.sumPeak;
+        document.getElementById('sumFuse').textContent = data.sumFuse;
+        document.getElementById('lblEarthing').textContent = data.lblEarthing;
+        document.getElementById('lblPhase').textContent = data.lblPhase;
+        if (document.getElementById('lblFuseMargin')) document.getElementById('lblFuseMargin').textContent = data.lblFuseMargin;
+        if (document.getElementById('btnLogo')) document.getElementById('btnLogo').textContent = data.btnLogo;
+        if (document.getElementById('btnRemoveLogo')) document.getElementById('btnRemoveLogo').textContent = data.btnRemoveLogo;
+        if (document.getElementById('totalPFLabel')) document.getElementById('totalPFLabel').textContent = data.totalPF;
+        if (document.getElementById('totalPFUnit')) document.getElementById('totalPFUnit').textContent = data.totalPFUnit;
+
+        document.querySelectorAll('#tableHeader th[data-key]').forEach(th => {
+            th.textContent = data[th.getAttribute('data-key')];
+        });
+
+        document.querySelectorAll('.vfd').forEach(sel => {
+            const currentVal = sel.value;
+            sel.options[0].text = data.optNo;
+            sel.options[1].text = data.optYes;
+            sel.value = currentVal;
+        });
+    }
+
+    function toggleVfd(select) {
+        const row = select.closest('tr');
+        const cosInput = row.querySelector('.cos');
+        if (select.value === 'ja') {
+            cosInput.dataset.originalCos = cosInput.value;
+            cosInput.value = '0.90';
+            cosInput.disabled = true;
+        } else {
+            cosInput.value = cosInput.dataset.originalCos || cosInput.value;
+            cosInput.disabled = false;
+        }
+        calculate();
+    }
+
+    function calculate() {
+
+        let tA = 0, tP = 0, tS = 0, tAP = 0;
+        document.querySelectorAll('#tableBody tr').forEach(row => {
+            // n_total: faktiska antalet, n_sim: samtidiga antalet
+            const n_total = parseFloat(row.querySelector('.antal').value) || 0;
+            const sim = (parseFloat(row.querySelector('.sim')?.value) || 100) / 100;
+            const n_sim = n_total * sim;
+            const kw = parseFloat(row.querySelector('.kw').value) || 0;
+            const L = (parseFloat(row.querySelector('.last').value) || 0) / 100;
+            const L_nom = Math.min(L, 1.0); // cap nominal load at 100%
+            const cos = parseFloat(row.querySelector('.cos').value) || 1;
+            const isVfd = row.querySelector('.vfd').value === 'ja';
+            const effBase = parseFloat(row.querySelector('.eff').value) || 1;
+            const U = parseFloat(row.querySelector('.volt').value) || 400;
+            const fas = parseInt(row.querySelector('.fas').value);
+            const pf = isVfd ? 0.90 : cos;
+            const root3 = (fas === 3) ? Math.sqrt(3) : 1;
+
+            // Nominella värden (med samtidighet)
+            let P_nom = (n_sim * kw * L_nom) / effBase;
+            let S_motor = P_nom / pf; // apparent power at motor side (kVA)
+            let S_nom = S_motor;
+            let I_nom = (S_nom * 1000) / (U * root3);
+
+            // Intermittenta värden (utan samtidighet)
+            let P_int = (n_total * kw * L) / effBase;
+            let S_int = P_int / pf;
+            let I_int = (S_int * 1000) / (U * root3);
+
+            row.querySelector('.res-a').textContent = I_nom.toFixed(2);
+            row.querySelector('.res-p').textContent = P_nom.toFixed(2);
+            row.querySelector('.res-s').textContent = S_nom.toFixed(2);
+            row.querySelector('.res-ia').textContent = I_int.toFixed(2);
+            row.querySelector('.res-ip').textContent = P_int.toFixed(2);
+            row.querySelector('.res-is').textContent = S_int.toFixed(2);
+
+            tA += I_nom; tP += P_nom; tS += S_nom; tAP += I_int;
+        });
+
+        document.getElementById('totalA').textContent = tA.toFixed(2);
+        document.getElementById('totalP').textContent = tP.toFixed(2);
+        document.getElementById('totalS').textContent = tS.toFixed(2);
+        document.getElementById('totalAPeak').textContent = tAP.toFixed(2);
+
+        // Uppdatera Total Effektfaktor
+        if (tS > 0) {
+            const totalPF = tP / tS;
+            document.getElementById('totalPFVal').textContent = totalPF.toFixed(2);
+        } else {
+            document.getElementById('totalPFVal').textContent = "0.00";
+        }
+
+        // Säkerhetsmarginal för säkring
+        const marginInput = document.getElementById('fuseMarginInput');
+        let margin = 0.15;
+        let marginPercent = 15;
+        if (marginInput) {
+            margin = parseFloat(marginInput.value) / 100;
+            if (isNaN(margin)) margin = 0.15;
+            marginPercent = parseInt(marginInput.value) || 15;
+        }
+        const steps = [10, 16, 20, 25, 32, 35, 40, 50, 63, 80, 100, 125, 160, 200, 250, 315, 400, 500, 630];
+        const suggested = steps.find(s => s >= (tAP * (1 + margin))) || 'N/A';
+        document.getElementById('fuse').textContent = suggested;
+
+        // Språkhantering för sammanställningsrader
+        const lang = document.getElementById('langSwitcher')?.value || 'sv';
+        const t = langData[lang];
+        // Hämta aktuella värden direkt från select-fälten
+        const earthingVal = document.getElementById('earthingSelect')?.value || '';
+        const phaseVal = document.getElementById('phaseSelect')?.value || '';
+        document.getElementById('earthingValCell').textContent = earthingVal;
+        document.getElementById('phaseValCell').textContent = phaseVal;
+        // Uppdatera fuse label dynamiskt
+        const fuseLabel = document.getElementById('sumFuse');
+        if (fuseLabel) {
+            fuseLabel.textContent = (t.sumFusePrefix || 'Föreslagen Huvudsäkring (+' ) + marginPercent + '%):';
+        }
+    }
+
+    function deleteRow(btn) {
+        const tbody = document.getElementById('tableBody');
+        if (tbody.rows.length <= 1) return; // behåll minst en rad
+        btn.closest('tr').remove();
+        calculate();
+    }
+
+    function addRow() {
+        const tbody = document.getElementById('tableBody');
+        const clone = tbody.rows[0].cloneNode(true);
+        clone.querySelectorAll('input').forEach(i => { if(i.type === 'text') i.value = 'Ny rad'; });
+        tbody.appendChild(clone);
+        calculate();
+        // För att behålla rätt språktext i den nya raden
+        const lang = document.getElementById('langSwitcher').value;
+        const data = langData[lang];
+        const newVfd = clone.querySelector('.vfd');
+        newVfd.options[0].text = data.optNo;
+        newVfd.options[1].text = data.optYes;
+    }
+
+    function handleLogoUpload(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('logoImg').src = e.target.result;
+            document.getElementById('logoWrapper').style.display = 'block';
+            document.getElementById('btnRemoveLogo').style.display = '';
+        };
+        reader.readAsDataURL(file);
+    }
+
+    function removeLogo() {
+        document.getElementById('logoImg').src = '';
+        document.getElementById('logoWrapper').style.display = 'none';
+        document.getElementById('btnRemoveLogo').style.display = 'none';
+        document.getElementById('logoInput').value = '';
+    }
+
+    window.onload = () => {
+        calculate();
+        changeLanguage();
+    };
+</script>
+</body>
+</html>

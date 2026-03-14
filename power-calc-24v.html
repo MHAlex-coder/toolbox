@@ -1,0 +1,1210 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>24V DC Power Calculator — IO-Link System</title>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: rgba(37,99,235,.08);
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --success: #16a34a;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+            --warn-bg: #fff7ed;
+            --warn-border: #f59e0b;
+            --warn-text: #9a3412;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.5; padding: 20px;
+        }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
+        .subtitle { text-align: center; color: var(--text-light); margin-bottom: 24px; font-size: 0.9rem; }
+        .container { max-width: 1300px; margin: 0 auto; }
+
+        .card {
+            background: var(--card); border-radius: 10px;
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+
+        /* Tabs */
+        .tab-bar {
+            display: flex; gap: 4px; flex-wrap: wrap; align-items: center;
+            margin-bottom: 20px; padding: 4px; background: #f1f5f9;
+            border-radius: 8px;
+        }
+        .tab-btn {
+            padding: 8px 20px; border: none; border-radius: 6px;
+            background: transparent; color: var(--text-light);
+            font-size: 0.9rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; position: relative;
+        }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+        .tab-btn:hover:not(.active) { background: #e2e8f0; }
+        .tab-btn .tab-close {
+            display: inline-block; margin-left: 8px; font-size: 0.75rem;
+            opacity: .6; cursor: pointer; padding: 2px 4px; border-radius: 3px;
+        }
+        .tab-btn .tab-close:hover { opacity: 1; background: rgba(0,0,0,.15); }
+        .tab-btn .tab-warn { color: #f59e0b; margin-left: 4px; }
+        .tab-btn .tab-ok { color: var(--success); margin-left: 4px; }
+        .tab-add {
+            padding: 8px 14px; border: 2px dashed var(--border); border-radius: 6px;
+            background: transparent; color: var(--text-light);
+            font-size: 0.9rem; cursor: pointer; transition: all .2s;
+        }
+        .tab-add:hover { border-color: var(--primary); color: var(--primary); }
+
+        /* Form grids */
+        .form-grid { display: grid; gap: 12px; margin-bottom: 16px; }
+        .form-grid.cols-2 { grid-template-columns: 1fr 1fr; }
+        .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .form-grid.cols-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+        .form-grid.cols-5 { grid-template-columns: 1fr 1fr 1fr 1fr 1fr; }
+        .form-grid label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px; }
+        .form-grid input, .form-grid select {
+            width: 100%; padding: 8px 12px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem;
+            transition: border-color .2s;
+        }
+        .form-grid input:focus, .form-grid select:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+        .form-grid input:disabled { background: #f1f5f9; color: var(--text-light); }
+
+        /* Section headers */
+        .section-header {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 14px; margin: 16px 0 8px;
+            background: #f1f5f9; border-radius: 6px; font-weight: 600;
+            font-size: 0.95rem; color: var(--text);
+        }
+        .section-header .section-total {
+            font-size: 0.9rem; color: var(--primary); font-weight: 700;
+        }
+
+        /* Component table */
+        .comp-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        .comp-table th {
+            padding: 8px 10px; text-align: left; font-size: 0.8rem;
+            font-weight: 600; color: var(--text-light); text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 2px solid var(--border);
+        }
+        .comp-table td { padding: 6px 8px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .comp-table tr:hover td { background: var(--primary-light); }
+        .comp-table input, .comp-table select {
+            width: 100%; padding: 6px 8px;
+            border: 1px solid transparent; border-radius: 4px; font-size: 0.9rem;
+            background: transparent; transition: all .15s;
+        }
+        .comp-table input:hover, .comp-table select:hover { border-color: var(--border); }
+        .comp-table input:focus, .comp-table select:focus {
+            outline: none; border-color: var(--primary); background: #fff;
+            box-shadow: 0 0 0 2px rgba(37,99,235,.12);
+        }
+        .comp-table input[type="number"] { text-align: center; }
+        .comp-table .total-cell {
+            font-weight: 600; color: var(--primary); text-align: right;
+            padding-right: 12px; font-size: 0.95rem; white-space: nowrap;
+        }
+        .comp-table .total-cell.zero { color: var(--text-light); opacity: .5; }
+
+        .row-delete {
+            background: none; border: none; color: var(--danger); cursor: pointer;
+            font-size: 1.1rem; padding: 4px 8px; border-radius: 4px; transition: all .15s;
+            opacity: .5;
+        }
+        .row-delete:hover { opacity: 1; background: #fef2f2; }
+
+        .add-row-btn {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 6px 14px; border: 1px dashed var(--border); border-radius: 6px;
+            background: transparent; color: var(--text-light);
+            font-size: 0.85rem; cursor: pointer; transition: all .2s; margin-top: 4px;
+        }
+        .add-row-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+
+        /* Summary cards */
+        .summary-card {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+            border: 2px solid #bfdbfe; border-radius: 10px;
+            padding: 20px; margin-top: 16px;
+        }
+        .summary-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px; margin-bottom: 12px;
+        }
+        .summary-item { text-align: center; }
+        .summary-item .label { font-size: 0.8rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: .5px; }
+        .summary-item .value { font-size: 1.6rem; font-weight: 700; color: var(--primary); }
+        .summary-item .unit { font-size: 0.85rem; color: var(--text-light); }
+        .summary-item.ok .value { color: var(--success); }
+        .summary-item.warn .value { color: var(--danger); }
+
+        /* Alert boxes */
+        .alert {
+            padding: 12px 16px; border-radius: 8px; font-size: 0.9rem;
+            margin-top: 12px; display: flex; align-items: flex-start; gap: 10px;
+        }
+        .alert-success { background: #f0fdf4; border: 1px solid #86efac; color: #166534; }
+        .alert-warning { background: #fff7ed; border: 1px solid #fdba74; color: #9a3412; }
+        .alert-danger { background: #fef2f2; border: 1px solid #fca5a5; color: #991b1b; }
+        .alert .alert-icon { font-size: 1.3rem; flex-shrink: 0; }
+        .alert strong { font-weight: 700; }
+
+        /* Voltage drop bar */
+        .vdrop-bar-container {
+            margin-top: 16px; padding: 16px; background: #f8fafc;
+            border-radius: 8px; border: 1px solid var(--border);
+        }
+        .vdrop-bar-label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); margin-bottom: 8px; }
+        .vdrop-bar-outer {
+            height: 28px; background: #e2e8f0; border-radius: 14px;
+            overflow: hidden; position: relative;
+        }
+        .vdrop-bar-inner {
+            height: 100%; border-radius: 14px; transition: width .3s, background .3s;
+            display: flex; align-items: center; justify-content: flex-end;
+            padding-right: 10px; font-size: 0.8rem; font-weight: 700; color: #fff;
+            min-width: 60px;
+        }
+        .vdrop-bar-inner.green { background: linear-gradient(90deg, #22c55e, #16a34a); }
+        .vdrop-bar-inner.yellow { background: linear-gradient(90deg, #eab308, #f59e0b); }
+        .vdrop-bar-inner.red { background: linear-gradient(90deg, #ef4444, #dc2626); }
+        .vdrop-bar-limit {
+            position: absolute; top: -2px; bottom: -2px; width: 3px; background: #1e293b;
+            border-radius: 2px;
+        }
+        .vdrop-bar-limit-label {
+            position: absolute; top: -18px; font-size: 0.7rem; font-weight: 600;
+            color: var(--text); transform: translateX(-50%); white-space: nowrap;
+        }
+
+        /* Fuse recommendation */
+        .fuse-card {
+            background: linear-gradient(135deg, #fefce8 0%, #fef9c3 100%);
+            border: 2px solid #fbbf24; border-radius: 10px;
+            padding: 20px; margin-top: 16px;
+        }
+        .fuse-card h3 { font-size: 1rem; color: #92400e; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .fuse-rating {
+            display: inline-flex; align-items: center; gap: 8px;
+            padding: 10px 20px; background: #fff; border-radius: 8px;
+            font-size: 1.3rem; font-weight: 700; color: var(--primary);
+            border: 2px solid #bfdbfe;
+        }
+
+        /* Project summary */
+        .project-summary {
+            background: linear-gradient(135deg, #f0fdf4 0%, #ecfdf5 100%);
+            border: 2px solid #86efac; border-radius: 10px;
+            padding: 20px; margin-top: 20px;
+        }
+        .project-table { width: 100%; border-collapse: collapse; }
+        .project-table th {
+            text-align: left; padding: 8px 12px; font-size: 0.8rem;
+            color: var(--text-light); border-bottom: 2px solid #86efac;
+            font-weight: 600; text-transform: uppercase;
+        }
+        .project-table td { padding: 8px 12px; border-bottom: 1px solid #d1fae5; font-size: 0.9rem; }
+        .project-table tr:last-child td { border-bottom: none; font-weight: 700; }
+        .project-table .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .project-table .status-ok { color: var(--success); font-weight: 700; }
+        .project-table .status-warn { color: var(--danger); font-weight: 700; }
+
+        /* Component Library */
+        .library-toggle {
+            padding: 8px 16px; border: 1px solid var(--border); border-radius: 6px;
+            background: #f8fafc; color: var(--text-light); font-size: 0.85rem;
+            cursor: pointer; transition: all .2s;
+        }
+        .library-toggle:hover { border-color: var(--primary); color: var(--primary); }
+        .library-panel {
+            display: none; margin-top: 12px; padding: 16px;
+            background: #f8fafc; border-radius: 8px; border: 1px solid var(--border);
+        }
+        .library-panel.open { display: block; }
+        .library-grid {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 8px; max-height: 400px; overflow-y: auto;
+        }
+        .library-item {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 8px 12px; background: #fff; border: 1px solid var(--border);
+            border-radius: 6px; font-size: 0.85rem; transition: all .15s;
+        }
+        .library-item:hover { border-color: var(--primary); background: var(--primary-light); }
+        .library-item .lib-name { font-weight: 600; }
+        .library-item .lib-detail { color: var(--text-light); font-size: 0.8rem; }
+        .library-item .lib-add {
+            background: var(--primary); color: #fff; border: none;
+            padding: 4px 10px; border-radius: 4px; cursor: pointer;
+            font-size: 0.8rem; font-weight: 600; flex-shrink: 0;
+        }
+        .library-item .lib-add:hover { background: var(--primary-hover); }
+        .lib-cat-header {
+            font-size: 0.8rem; font-weight: 700; color: var(--text-light);
+            text-transform: uppercase; letter-spacing: 0.5px; padding: 8px 4px 4px;
+            grid-column: 1 / -1; border-bottom: 1px solid var(--border);
+        }
+
+        /* Manage library */
+        .lib-manage-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        .lib-manage-table th {
+            text-align: left; padding: 6px 8px; font-size: 0.8rem;
+            color: var(--text-light); border-bottom: 2px solid var(--border);
+        }
+        .lib-manage-table td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+        .lib-manage-table input, .lib-manage-table select {
+            width: 100%; padding: 5px 8px; border: 1px solid var(--border);
+            border-radius: 4px; font-size: 0.85rem;
+        }
+        .lib-manage-table input:focus, .lib-manage-table select:focus {
+            outline: none; border-color: var(--primary);
+        }
+
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn {
+            padding: 10px 24px; border: none; border-radius: 6px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: #fff; }
+        .btn-sm { padding: 6px 14px; font-size: 0.85rem; }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #1e293b; color: #fff; padding: 12px 24px;
+            border-radius: 8px; font-size: 0.9rem;
+            opacity: 0; transform: translateY(20px); transition: all .3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        .hidden-input { display: none; }
+
+        /* Topology view */
+        .topology-card {
+            background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+            border: 2px solid #7dd3fc; border-radius: 10px;
+            padding: 20px; margin-top: 16px;
+        }
+        .topology-card h3 { font-size: 1rem; color: #0c4a6e; margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
+        .topo-row { display: flex; align-items: center; gap: 6px; margin: 3px 0; font-size: 0.85rem; flex-wrap: wrap; }
+        .topo-node {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 3px 10px; border-radius: 4px; font-weight: 600;
+            font-size: 0.8rem; white-space: nowrap;
+        }
+        .topo-psu { background: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        .topo-fuse { background: #fef3c7; color: #92400e; border: 1px solid #fbbf24; }
+        .topo-master { background: #ddd6fe; color: #5b21b6; border: 1px solid #a78bfa; }
+        .topo-hub { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+        .topo-device { background: #f1f5f9; color: var(--text); border: 1px solid var(--border); }
+        .topo-connector { color: var(--text-light); font-size: 0.8rem; }
+
+        /* Cable spec table */
+        .cable-spec-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 0.85rem; }
+        .cable-spec-table th { text-align: left; padding: 6px 10px; background: #f1f5f9; color: var(--text-light); font-size: 0.75rem; text-transform: uppercase; }
+        .cable-spec-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+        .cable-spec-table .highlight { background: var(--primary-light); font-weight: 600; }
+
+        @media (max-width: 700px) {
+            .form-grid.cols-2, .form-grid.cols-3, .form-grid.cols-4, .form-grid.cols-5 { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+            .comp-table { font-size: 0.8rem; }
+            .summary-grid { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ 24V DC Power Calculator</h1>
+        <p class="subtitle">Calculate load current for IO-Link systems — determine fuse ratings and check voltage drop limits</p>
+
+        <!-- Project Info -->
+        <div class="card">
+            <h2><span class="icon">📋</span> Project Information</h2>
+            <div class="form-grid cols-3">
+                <div>
+                    <label for="projectName">Project Name</label>
+                    <input type="text" id="projectName" placeholder="Enter project name...">
+                </div>
+                <div>
+                    <label for="supplyVoltage">Supply Voltage (V DC)</label>
+                    <input type="number" id="supplyVoltage" value="24" step="0.1" min="0" onchange="render()">
+                </div>
+                <div>
+                    <label for="projectNote">Notes</label>
+                    <input type="text" id="projectNote" placeholder="Optional notes...">
+                </div>
+            </div>
+        </div>
+
+        <!-- Power Feed Tabs -->
+        <div class="card" id="mainCard">
+            <h2><span class="icon">🔌</span> Power Feeds</h2>
+            <div class="tab-bar" id="tabBar">
+                <button class="tab-add" onclick="addFeed()" title="Add new power feed">+ Add Feed</button>
+            </div>
+            <div id="feedPanels"></div>
+        </div>
+
+        <!-- Project Summary -->
+        <div class="card" id="projectSummaryCard" style="display:none">
+            <h2><span class="icon">📊</span> Project Summary — All Feeds</h2>
+            <div class="project-summary" id="projectSummary"></div>
+        </div>
+
+        <!-- Component Library -->
+        <div class="card">
+            <h2>
+                <span class="icon">📚</span> Component Library
+                <span style="flex:1"></span>
+                <button class="library-toggle" onclick="toggleLibrary()">Show / Hide Library</button>
+                <button class="library-toggle" style="margin-left:6px" onclick="toggleLibraryManager()">Manage</button>
+            </h2>
+            <div class="library-panel" id="libraryPanel">
+                <div style="margin-bottom:10px;font-size:0.85rem;color:var(--text-light);">
+                    Click <strong>Add</strong> to insert a component into the active power feed.
+                </div>
+                <div class="library-grid" id="libraryGrid"></div>
+            </div>
+            <div class="library-panel" id="libraryManagerPanel">
+                <h3 style="font-size:0.95rem;margin-bottom:8px;">Manage Library Components</h3>
+                <div id="libraryManagerContent"></div>
+                <div class="btn-row" style="margin-top:10px;">
+                    <button class="btn btn-primary btn-sm" onclick="addLibraryItem()">+ Add Component</button>
+                    <button class="btn btn-outline btn-sm" onclick="resetLibraryDefaults()">Reset to Defaults</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="card">
+            <h2><span class="icon">💾</span> Save &amp; Export</h2>
+            <div class="btn-row">
+                <button class="btn btn-success" onclick="exportExcel()">📊 Export to Excel</button>
+                <button class="btn btn-outline" onclick="saveJson()">🧾 Save Project (JSON)</button>
+                <button class="btn btn-outline" onclick="triggerJsonLoad()">📂 Load Project (JSON)</button>
+                <button class="btn btn-outline" onclick="copyProjectSummary()">📋 Copy Summary</button>
+                <button class="btn btn-danger" onclick="clearAll()">✕ Clear All</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="jsonFileInput" accept=".json" class="hidden-input">
+    <div class="toast" id="toast"></div>
+
+<script>
+// ===================== CONSTANTS =====================
+
+// Copper resistivity at 20°C: 0.0175 Ω·mm²/m
+// Temperature correction to ~40°C: ×1.08 → ~0.0189
+const COPPER_RESISTIVITY = 0.0175; // Ω·mm²/m at 20°C
+
+const STANDARD_FUSES = [0.5, 1, 2, 3, 4, 5, 6, 8, 10, 13, 16, 20, 25, 32];
+
+const CABLE_SIZES = [0.25, 0.34, 0.5, 0.75, 1.0, 1.5, 2.5, 4.0, 6.0];
+
+// ===================== DEFAULT LIBRARY =====================
+
+const DEFAULT_LIBRARY = [
+    // IO-Link Infrastructure
+    { cat: 'IO-Link Infrastructure', name: 'IO-Link Master (4-port)',    current: 0.13,  note: 'e.g. Balluff BNI, ifm AL1100' },
+    { cat: 'IO-Link Infrastructure', name: 'IO-Link Master (8-port)',    current: 0.25,  note: 'e.g. ifm AL1300, Balluff' },
+    { cat: 'IO-Link Infrastructure', name: 'IO-Link Hub (8-port)',       current: 0.065, note: 'Digital I/O hub, e.g. ifm' },
+    { cat: 'IO-Link Infrastructure', name: 'IO-Link Hub (16-port)',      current: 0.10,  note: 'Digital I/O hub, extended' },
+    { cat: 'IO-Link Infrastructure', name: 'IO-Link Safety Hub',         current: 0.18,  note: 'Safety rated hub' },
+    { cat: 'IO-Link Infrastructure', name: 'RFID Evaluation Unit',       current: 0.20,  note: 'RFID processor/gateway' },
+
+    // Sensors
+    { cat: 'Sensors',  name: 'Standard Sensor (NPN/PNP)',   current: 0.03,  note: 'Inductive, capacitive, photoelectric' },
+    { cat: 'Sensors',  name: 'IO-Link Sensor',              current: 0.05,  note: 'Smart sensor with IO-Link' },
+    { cat: 'Sensors',  name: 'RFID Read Head',              current: 0.05,  note: 'HF/UHF RFID antenna' },
+    { cat: 'Sensors',  name: 'Light Curtain / Light Beam',  current: 0.50,  note: 'Safety or measuring light curtain' },
+    { cat: 'Sensors',  name: 'Pressure Sensor',             current: 0.04,  note: 'Analog or IO-Link pressure sensor' },
+    { cat: 'Sensors',  name: 'Laser Distance Sensor',       current: 0.15,  note: 'ToF or triangulation' },
+    { cat: 'Sensors',  name: 'Vision Sensor / Camera',      current: 0.50,  note: 'Smart camera, e.g. ifm O2D/O3D' },
+
+    // Pneumatics
+    { cat: 'Pneumatics', name: 'Pneumatic Pressure Switch',   current: 0.07,  note: 'Mechanical or electronic' },
+    { cat: 'Pneumatics', name: 'Solenoid Valve (single)',     current: 0.04,  note: '24V DC solenoid, single coil' },
+    { cat: 'Pneumatics', name: 'Solenoid Valve (double)',     current: 0.08,  note: '24V DC solenoid, double coil' },
+    { cat: 'Pneumatics', name: 'Valve Terminal (8-way)',      current: 0.32,  note: 'e.g. Festo VTUG, SMC' },
+    { cat: 'Pneumatics', name: 'Proportional Valve',          current: 0.25,  note: 'Analog controlled valve' },
+
+    // Actuators & Drives
+    { cat: 'Actuators', name: 'Smart Motor 24V',             current: 0.12,  note: 'Motec, SEW 24V, small DC motor' },
+    { cat: 'Actuators', name: 'IO-Link Actuator',            current: 0.10,  note: 'IO-Link controlled actuator' },
+    { cat: 'Actuators', name: 'Signal Tower / Stack Light',  current: 0.10,  note: '24V signal column' },
+    { cat: 'Actuators', name: 'Indicator Light (LED)',        current: 0.02,  note: 'Panel LED indicator' },
+
+    // Other
+    { cat: 'Other', name: 'Network Switch (unmanaged)',  current: 0.25,  note: 'Small industrial Ethernet switch' },
+    { cat: 'Other', name: 'Barcode Scanner',             current: 0.15,  note: 'Fixed mount barcode reader' },
+    { cat: 'Other', name: 'HMI Panel (small)',           current: 0.50,  note: '4-7" operator panel' },
+    { cat: 'Other', name: 'Custom Component',            current: 0.00,  note: 'User-defined' },
+];
+
+let componentLibrary = JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
+try {
+    const saved = localStorage.getItem('powerCalc24vLibrary');
+    if (saved) componentLibrary = JSON.parse(saved);
+} catch(e) {}
+
+function saveLibrary() {
+    localStorage.setItem('powerCalc24vLibrary', JSON.stringify(componentLibrary));
+}
+
+// ===================== DATA MODEL =====================
+
+function makeRow(name, currentPerUnit, qty, note) {
+    return {
+        name: name || '',
+        current: currentPerUnit || 0,
+        qty: qty || 0,
+        note: note || ''
+    };
+}
+
+function makeDefaultRows() {
+    return [
+        makeRow('IO-Link Master (4-port)', 0.13, 1, ''),
+        makeRow('IO-Link Hub (8-port)',     0.065, 0, ''),
+        makeRow('IO-Link Safety Hub',       0.18, 0, ''),
+        makeRow('Standard Sensor (NPN/PNP)',0.03, 0, ''),
+        makeRow('IO-Link Sensor',           0.05, 0, ''),
+        makeRow('RFID Read Head',           0.05, 0, ''),
+        makeRow('Pneumatic Pressure Switch',0.07, 0, ''),
+        makeRow('Solenoid Valve (single)',  0.04, 0, ''),
+        makeRow('Smart Motor 24V',          0.12, 0, ''),
+        makeRow('Light Curtain / Light Beam', 0.50, 0, ''),
+    ];
+}
+
+function makeFeed(name) {
+    return {
+        id: Date.now() + Math.random(),
+        name: name || 'PWR Feed 1',
+        fuseRating: 3,       // Amps — default fuse
+        cableLength: 20,     // meters (one-way)
+        cableCrossSection: 1.5, // mm²
+        minLoadVoltage: 23,  // V DC
+        safetyMargin: 20,    // percent — derating
+        rows: makeDefaultRows(),
+    };
+}
+
+let feeds = [makeFeed('PWR Feed 1')];
+let activeTab = 0;
+
+// ===================== CALCULATIONS =====================
+
+function sumCurrent(rows) {
+    return rows.reduce((s, r) => s + (r.qty * r.current), 0);
+}
+
+function calcVoltageDrop(current, lengthM, crossSectionMm2, supplyV) {
+    // V_drop = 2 * I * R_cable  (return path included)
+    // R_cable = ρ * L / A
+    if (crossSectionMm2 <= 0 || supplyV <= 0) return { dropV: 0, dropPct: 0 };
+    const resistance = COPPER_RESISTIVITY * lengthM / crossSectionMm2;
+    const dropV = 2 * current * resistance; // Factor 2 for supply + return
+    const dropPct = (dropV / supplyV) * 100;
+    return { dropV, dropPct, resistance: resistance * 2 };
+}
+
+function recommendFuse(totalCurrent, safetyMarginPct) {
+    const required = totalCurrent * (1 + safetyMarginPct / 100);
+    // Find the smallest standard fuse that is >= required current
+    for (const f of STANDARD_FUSES) {
+        if (f >= required) return f;
+    }
+    return STANDARD_FUSES[STANDARD_FUSES.length - 1]; // Largest available
+}
+
+function getSupplyVoltage() {
+    return parseFloat(document.getElementById('supplyVoltage').value) || 24;
+}
+
+// ===================== RENDERING =====================
+
+function render() {
+    renderTabs();
+    renderFeedPanel();
+    renderProjectSummary();
+    renderLibraryGrid();
+}
+
+function renderTabs() {
+    const bar = document.getElementById('tabBar');
+    const addBtn = bar.querySelector('.tab-add');
+    bar.querySelectorAll('.tab-btn').forEach(b => b.remove());
+
+    const supplyV = getSupplyVoltage();
+
+    feeds.forEach((feed, i) => {
+        const btn = document.createElement('button');
+        btn.className = 'tab-btn' + (i === activeTab ? ' active' : '');
+
+        const total = sumCurrent(feed.rows);
+        const currentWithMargin = total * (1 + feed.safetyMargin / 100);
+        const vdrop = calcVoltageDrop(total, feed.cableLength, feed.cableCrossSection, supplyV);
+        const voltageAtEnd = supplyV - vdrop.dropV;
+        const hasIssue = voltageAtEnd < feed.minLoadVoltage || currentWithMargin > feed.fuseRating;
+
+        let label = escapeHtml(feed.name);
+        if (total > 0) {
+            label += hasIssue
+                ? '<span class="tab-warn">⚠️</span>'
+                : '<span class="tab-ok">✓</span>';
+        }
+        if (feeds.length > 1) {
+            label += '<span class="tab-close" data-idx="'+i+'" title="Remove feed">✕</span>';
+        }
+        btn.innerHTML = label;
+        btn.addEventListener('click', (e) => {
+            if (e.target.classList.contains('tab-close')) {
+                removeFeed(parseInt(e.target.dataset.idx));
+                return;
+            }
+            activeTab = i;
+            render();
+        });
+        bar.insertBefore(btn, addBtn);
+    });
+}
+
+function renderFeedPanel() {
+    const panel = document.getElementById('feedPanels');
+    const feed = feeds[activeTab];
+    if (!feed) { panel.innerHTML = ''; return; }
+
+    const supplyV = getSupplyVoltage();
+    const totalCurrent = sumCurrent(feed.rows);
+    const vdrop = calcVoltageDrop(totalCurrent, feed.cableLength, feed.cableCrossSection, supplyV);
+    const totalPower = totalCurrent * supplyV;
+    const recFuse = recommendFuse(totalCurrent, feed.safetyMargin);
+    const deratedCurrent = totalCurrent * (1 + feed.safetyMargin / 100);
+    const voltageAtEnd = supplyV - vdrop.dropV;
+
+    let html = '';
+
+    // Feed settings
+    html += '<div class="form-grid cols-5">';
+    html += '<div><label>Feed Name</label><input type="text" value="'+escapeAttr(feed.name)+'" onchange="feeds['+activeTab+'].name=this.value;renderTabs();renderProjectSummary();"></div>';
+    html += '<div><label>Fuse Rating (A)</label><select onchange="feeds['+activeTab+'].fuseRating=parseFloat(this.value);render();">';
+    STANDARD_FUSES.forEach(f => {
+        html += '<option value="'+f+'"'+(feed.fuseRating===f?' selected':'')+'>'+f+' A</option>';
+    });
+    html += '</select></div>';
+    html += '<div><label>Cable Length (m, one-way)</label><input type="number" min="0" step="1" value="'+feed.cableLength+'" onchange="feeds['+activeTab+'].cableLength=parseFloat(this.value)||0;render();"></div>';
+    html += '<div><label>Cable Cross-Section (mm²)</label><select onchange="feeds['+activeTab+'].cableCrossSection=parseFloat(this.value);render();">';
+    CABLE_SIZES.forEach(s => {
+        html += '<option value="'+s+'"'+(feed.cableCrossSection===s?' selected':'')+'>'+s+' mm²</option>';
+    });
+    html += '</select></div>';
+    html += '<div><label>Min Load Voltage (V)</label><input type="number" min="0" step="0.1" value="'+feed.minLoadVoltage+'" onchange="feeds['+activeTab+'].minLoadVoltage=parseFloat(this.value)||23;render();"></div>';
+    html += '</div>';
+    html += '<div style="margin-top:8px;display:flex;align-items:center;gap:10px;justify-content:flex-end;">';
+    html += '<label style="font-size:0.85rem;font-weight:600;color:var(--text-light);">Safety Margin:</label>';
+    html += '<input type="number" value="'+feed.safetyMargin+'" min="0" max="100" step="1" style="width:70px;padding:6px 8px;border:1px solid var(--border);border-radius:4px;text-align:center;" onchange="feeds['+activeTab+'].safetyMargin=parseFloat(this.value)||0;render();"> %';
+    html += '</div>';
+
+    // Component table
+    html += '<div class="section-header">🔌 Components on this feed<span class="section-total">Total: '+totalCurrent.toFixed(3)+' A</span></div>';
+    html += renderTable(feed.rows);
+    html += '<button class="add-row-btn" onclick="addRow()">+ Add Component</button>';
+
+    // Summary
+    html += '<div class="summary-card">';
+    html += '<div class="summary-grid">';
+
+    html += '<div class="summary-item"><div class="label">Total Current</div><div class="value">'+totalCurrent.toFixed(3)+'</div><div class="unit">A</div></div>';
+    html += '<div class="summary-item"><div class="label">With '+feed.safetyMargin+'% Margin</div><div class="value">'+deratedCurrent.toFixed(3)+'</div><div class="unit">A</div></div>';
+    html += '<div class="summary-item"><div class="label">Total Power</div><div class="value">'+totalPower.toFixed(1)+'</div><div class="unit">W</div></div>';
+
+    const fuseOk = deratedCurrent <= feed.fuseRating;
+    html += '<div class="summary-item '+(fuseOk?'ok':'warn')+'"><div class="label">Fuse Rating</div><div class="value">'+feed.fuseRating+'</div><div class="unit">A '+(fuseOk?'✓ OK':'⚠️ EXCEEDED')+'</div></div>';
+
+    const voltageOk = voltageAtEnd >= feed.minLoadVoltage;
+    html += '<div class="summary-item '+(voltageOk?'ok':'warn')+'"><div class="label">Voltage Drop</div><div class="value">'+vdrop.dropV.toFixed(2)+'</div><div class="unit">V ('+vdrop.dropPct.toFixed(1)+'%)</div></div>';
+
+    html += '<div class="summary-item '+(voltageOk?'ok':'warn')+'"><div class="label">Voltage at Load</div><div class="value">'+voltageAtEnd.toFixed(1)+'</div><div class="unit">V DC (min '+feed.minLoadVoltage+' V)</div></div>';
+
+    html += '</div>';
+    html += '</div>';
+
+    // Voltage drop bar
+    html += renderVoltageDropBar(voltageAtEnd, feed.minLoadVoltage, supplyV);
+
+    // Alerts
+    if (totalCurrent > 0) {
+        if (!fuseOk) {
+            html += '<div class="alert alert-danger"><span class="alert-icon">⚠️</span><div><strong>Current exceeds fuse rating!</strong><br>Total current with margin ('+deratedCurrent.toFixed(3)+' A) exceeds the selected fuse ('+feed.fuseRating+' A). Reduce load or increase fuse rating.</div></div>';
+        }
+        if (!voltageOk) {
+            html += '<div class="alert alert-warning"><span class="alert-icon">⚡</span><div><strong>Load voltage below limit!</strong><br>Voltage at load is '+voltageAtEnd.toFixed(2)+' V, below the minimum '+feed.minLoadVoltage.toFixed(1)+' V. Consider using a larger cable cross-section, shortening the cable, or splitting the load across multiple feeds.</div></div>';
+        }
+        if (fuseOk && voltageOk) {
+            html += '<div class="alert alert-success"><span class="alert-icon">✅</span><div><strong>System OK</strong> — Current within fuse rating and load voltage within limits.</div></div>';
+        }
+    }
+
+    // Fuse recommendation
+    html += '<div class="fuse-card">';
+    html += '<h3>🔒 Fuse Recommendation</h3>';
+    html += '<div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">';
+    html += '<div class="fuse-rating">⚡ '+recFuse+' A</div>';
+    html += '<div style="font-size:0.9rem;color:var(--text-light);">';
+    html += 'Recommended minimum fuse for '+totalCurrent.toFixed(3)+' A load + '+feed.safetyMargin+'% margin = '+deratedCurrent.toFixed(3)+' A';
+    html += '</div>';
+    html += '</div>';
+
+    // Cable lookup table
+    html += '<div style="margin-top:16px;">';
+    html += '<div style="font-size:0.85rem;font-weight:600;color:var(--text-light);margin-bottom:4px;">Voltage Drop by Cable Size (at '+totalCurrent.toFixed(3)+' A, '+feed.cableLength+' m one-way):</div>';
+    html += '<table class="cable-spec-table"><thead><tr><th>Cable (mm²)</th><th>Resistance (Ω)</th><th>V Drop (V)</th><th>V Drop (%)</th><th>Voltage at Load</th><th>Status</th></tr></thead><tbody>';
+    CABLE_SIZES.forEach(cs => {
+        const vd = calcVoltageDrop(totalCurrent, feed.cableLength, cs, supplyV);
+        const loadVoltage = supplyV - vd.dropV;
+        const ok = loadVoltage >= feed.minLoadVoltage;
+        const isSelected = cs === feed.cableCrossSection;
+        html += '<tr class="'+(isSelected?'highlight':'')+'">';
+        html += '<td>'+cs+' mm²'+(isSelected?' ◄':'')+'</td>';
+        html += '<td>'+vd.resistance.toFixed(4)+' Ω</td>';
+        html += '<td>'+vd.dropV.toFixed(3)+' V</td>';
+        html += '<td>'+vd.dropPct.toFixed(2)+'%</td>';
+        html += '<td>'+loadVoltage.toFixed(2)+' V</td>';
+        html += '<td style="font-weight:600;color:'+(ok?'var(--success)':'var(--danger)')+'">'+(ok?'✓ OK':'⚠️ Too low')+'</td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    html += '</div>';
+
+    html += '</div>'; // fuse-card
+
+    panel.innerHTML = html;
+}
+
+function renderTable(rows) {
+    let html = '<table class="comp-table">';
+    html += '<thead><tr>';
+    html += '<th style="width:30%">Component</th>';
+    html += '<th style="width:14%;text-align:center">Current/Unit (A)</th>';
+    html += '<th style="width:10%;text-align:center">Qty</th>';
+    html += '<th style="width:14%;text-align:right">Total (A)</th>';
+    html += '<th style="width:14%;text-align:right">Power (W)</th>';
+    html += '<th style="width:14%">Note</th>';
+    html += '<th style="width:4%;text-align:center"></th>';
+    html += '</tr></thead><tbody>';
+
+    const supplyV = getSupplyVoltage();
+
+    rows.forEach((row, i) => {
+        const total = row.qty * row.current;
+        const power = total * supplyV;
+        html += '<tr>';
+        html += '<td><input type="text" value="'+escapeAttr(row.name)+'" onchange="updateRow('+i+',\'name\',this.value)"></td>';
+        html += '<td><input type="number" min="0" step="0.001" value="'+row.current+'" style="text-align:center" onchange="updateRow('+i+',\'current\',parseFloat(this.value)||0)"></td>';
+        html += '<td><input type="number" min="0" value="'+row.qty+'" style="text-align:center" onchange="updateRow('+i+',\'qty\',parseFloat(this.value)||0)"></td>';
+        html += '<td class="total-cell'+(total===0?' zero':'')+'">'+total.toFixed(3)+' A</td>';
+        html += '<td class="total-cell'+(total===0?' zero':'')+'" style="color:var(--text)">'+power.toFixed(1)+' W</td>';
+        html += '<td><input type="text" value="'+escapeAttr(row.note)+'" placeholder="..." style="font-size:0.8rem;color:var(--text-light)" onchange="updateRow('+i+',\'note\',this.value)"></td>';
+        html += '<td><button class="row-delete" onclick="deleteRow('+i+')" title="Remove">🗑️</button></td>';
+        html += '</tr>';
+    });
+
+    html += '</tbody></table>';
+    return html;
+}
+
+function renderVoltageDropBar(loadVoltage, minLoadVoltage, supplyV) {
+    const rangeMax = Math.max(supplyV, minLoadVoltage + 1);
+    const clampedVoltage = Math.max(0, Math.min(loadVoltage, rangeMax));
+    const barPct = (clampedVoltage / rangeMax) * 100;
+    const limitPct = (minLoadVoltage / rangeMax) * 100;
+
+    let colorClass = 'green';
+    if (loadVoltage < minLoadVoltage) colorClass = 'red';
+    else if (loadVoltage < minLoadVoltage + 0.5) colorClass = 'yellow';
+
+    let html = '<div class="vdrop-bar-container">';
+    html += '<div class="vdrop-bar-label">Voltage at Load: '+loadVoltage.toFixed(2)+' V (minimum: '+minLoadVoltage.toFixed(1)+' V)</div>';
+    html += '<div class="vdrop-bar-outer" style="position:relative">';
+    html += '<div class="vdrop-bar-inner '+colorClass+'" style="width:'+Math.max(barPct, 3)+'%">'+loadVoltage.toFixed(2)+' V</div>';
+    html += '<div class="vdrop-bar-limit" style="left:'+limitPct+'%"><span class="vdrop-bar-limit-label">'+minLoadVoltage.toFixed(1)+' V min</span></div>';
+    html += '</div>';
+    html += '</div>';
+    return html;
+}
+
+function renderProjectSummary() {
+    const card = document.getElementById('projectSummaryCard');
+    if (feeds.length === 0) { card.style.display = 'none'; return; }
+    card.style.display = 'block';
+
+    const supplyV = getSupplyVoltage();
+    let totalAllCurrent = 0;
+    let totalAllPower = 0;
+
+    let html = '<table class="project-table">';
+    html += '<thead><tr><th>Feed</th><th class="num">Components</th><th class="num">Current (A)</th><th class="num">With Margin (A)</th><th class="num">Power (W)</th><th class="num">Fuse (A)</th><th class="num">Cable</th><th class="num">Load Voltage</th><th class="num">Status</th></tr></thead><tbody>';
+
+    feeds.forEach(feed => {
+        const total = sumCurrent(feed.rows);
+        const margin = total * (1 + feed.safetyMargin / 100);
+        const power = total * supplyV;
+        const vdrop = calcVoltageDrop(total, feed.cableLength, feed.cableCrossSection, supplyV);
+        const loadVoltage = supplyV - vdrop.dropV;
+        const compCount = feed.rows.reduce((s, r) => s + r.qty, 0);
+        totalAllCurrent += total;
+        totalAllPower += power;
+
+        const fuseOk = margin <= feed.fuseRating;
+        const voltageOk = loadVoltage >= feed.minLoadVoltage;
+        const allOk = fuseOk && voltageOk;
+
+        html += '<tr>';
+        html += '<td>'+escapeHtml(feed.name)+'</td>';
+        html += '<td class="num">'+compCount+'</td>';
+        html += '<td class="num">'+total.toFixed(3)+'</td>';
+        html += '<td class="num">'+margin.toFixed(3)+'</td>';
+        html += '<td class="num">'+power.toFixed(1)+'</td>';
+        html += '<td class="num">'+feed.fuseRating+' A</td>';
+        html += '<td class="num">'+feed.cableCrossSection+' mm² / '+feed.cableLength+' m</td>';
+        html += '<td class="num">'+loadVoltage.toFixed(2)+' V</td>';
+        html += '<td class="num '+(allOk?'status-ok':'status-warn')+'">'+(total<=0?'—':allOk?'✅ OK':'⚠️ Check')+'</td>';
+        html += '</tr>';
+    });
+
+    html += '<tr style="border-top:2px solid #86efac">';
+    html += '<td colspan="2"><strong>Project Total</strong></td>';
+    html += '<td class="num"><strong>'+totalAllCurrent.toFixed(3)+'</strong></td>';
+    html += '<td class="num"></td>';
+    html += '<td class="num"><strong>'+totalAllPower.toFixed(1)+'</strong></td>';
+    html += '<td colspan="4"></td>';
+    html += '</tr>';
+    html += '</tbody></table>';
+
+    document.getElementById('projectSummary').innerHTML = html;
+}
+
+function renderLibraryGrid() {
+    const grid = document.getElementById('libraryGrid');
+    grid.innerHTML = '';
+
+    const categories = [...new Set(componentLibrary.map(c => c.cat))];
+
+    categories.forEach(cat => {
+        const header = document.createElement('div');
+        header.className = 'lib-cat-header';
+        header.textContent = cat;
+        grid.appendChild(header);
+
+        componentLibrary.forEach((item, i) => {
+            if (item.cat !== cat) return;
+            const div = document.createElement('div');
+            div.className = 'library-item';
+            div.innerHTML =
+                '<div><span class="lib-name">'+escapeHtml(item.name)+'</span><br>' +
+                '<span class="lib-detail">'+item.current+' A'+(item.note ? ' · '+escapeHtml(item.note) : '')+'</span></div>' +
+                '<button class="lib-add" onclick="addFromLibrary('+i+')">Add</button>';
+            grid.appendChild(div);
+        });
+    });
+}
+
+function renderLibraryManager() {
+    const container = document.getElementById('libraryManagerContent');
+    const categories = [...new Set(componentLibrary.map(c => c.cat))];
+
+    let html = '<table class="lib-manage-table">';
+    html += '<thead><tr><th>Category</th><th>Name</th><th>Current (A)</th><th>Note</th><th></th></tr></thead><tbody>';
+    componentLibrary.forEach((item, i) => {
+        html += '<tr>';
+        html += '<td><input value="'+escapeAttr(item.cat)+'" onchange="componentLibrary['+i+'].cat=this.value;saveLibrary();"></td>';
+        html += '<td><input value="'+escapeAttr(item.name)+'" onchange="componentLibrary['+i+'].name=this.value;saveLibrary();"></td>';
+        html += '<td><input type="number" step="0.001" value="'+item.current+'" onchange="componentLibrary['+i+'].current=parseFloat(this.value)||0;saveLibrary();"></td>';
+        html += '<td><input value="'+escapeAttr(item.note||'')+'" onchange="componentLibrary['+i+'].note=this.value;saveLibrary();"></td>';
+        html += '<td><button class="row-delete" onclick="removeLibraryItem('+i+')" title="Remove">🗑️</button></td>';
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    container.innerHTML = html;
+}
+
+// ===================== ACTIONS =====================
+
+function addFeed(name) {
+    const n = feeds.length + 1;
+    feeds.push(makeFeed(name || 'PWR Feed ' + n));
+    activeTab = feeds.length - 1;
+    render();
+    showToast('🔌 New power feed added');
+}
+
+function removeFeed(idx) {
+    if (feeds.length <= 1) return;
+    if (!confirm('Remove feed "'+feeds[idx].name+'"?')) return;
+    feeds.splice(idx, 1);
+    if (activeTab >= feeds.length) activeTab = feeds.length - 1;
+    render();
+    showToast('🗑️ Feed removed');
+}
+
+function addRow() {
+    const feed = feeds[activeTab];
+    feed.rows.push(makeRow('', 0, 0, ''));
+    render();
+}
+
+function deleteRow(idx) {
+    feeds[activeTab].rows.splice(idx, 1);
+    render();
+}
+
+function updateRow(idx, field, value) {
+    feeds[activeTab].rows[idx][field] = value;
+    render();
+}
+
+function addFromLibrary(libIdx) {
+    const item = componentLibrary[libIdx];
+    const feed = feeds[activeTab];
+    feed.rows.push(makeRow(item.name, item.current, 1, item.note || ''));
+    render();
+    showToast('➕ Added "'+item.name+'" to '+feed.name);
+}
+
+function addLibraryItem() {
+    componentLibrary.push({ cat: 'Other', name: 'New Component', current: 0, note: '' });
+    saveLibrary();
+    renderLibraryManager();
+    renderLibraryGrid();
+}
+
+function removeLibraryItem(idx) {
+    componentLibrary.splice(idx, 1);
+    saveLibrary();
+    renderLibraryManager();
+    renderLibraryGrid();
+}
+
+function resetLibraryDefaults() {
+    if (!confirm('Reset library to default components?')) return;
+    componentLibrary = JSON.parse(JSON.stringify(DEFAULT_LIBRARY));
+    saveLibrary();
+    renderLibraryManager();
+    renderLibraryGrid();
+    showToast('📚 Library reset to defaults');
+}
+
+function toggleLibrary() {
+    document.getElementById('libraryPanel').classList.toggle('open');
+    document.getElementById('libraryManagerPanel').classList.remove('open');
+}
+
+function toggleLibraryManager() {
+    const panel = document.getElementById('libraryManagerPanel');
+    panel.classList.toggle('open');
+    document.getElementById('libraryPanel').classList.remove('open');
+    if (panel.classList.contains('open')) renderLibraryManager();
+}
+
+// ===================== JSON SAVE / LOAD =====================
+
+function getAppState() {
+    return {
+        version: 1,
+        type: 'powerCalc24vDC',
+        savedAt: new Date().toISOString(),
+        projectName: document.getElementById('projectName').value,
+        projectNote: document.getElementById('projectNote').value,
+        supplyVoltage: getSupplyVoltage(),
+        feeds: feeds,
+        library: componentLibrary
+    };
+}
+
+function applyAppState(state) {
+    if (!state || state.type !== 'powerCalc24vDC') throw new Error('Invalid file — expected 24V DC Power Calc project');
+    document.getElementById('projectName').value = state.projectName || '';
+    document.getElementById('projectNote').value = state.projectNote || '';
+    document.getElementById('supplyVoltage').value = state.supplyVoltage || 24;
+    feeds = (state.feeds || []).map(f => ({
+        id: f.id || Date.now() + Math.random(),
+        name: f.name || 'Feed',
+        fuseRating: f.fuseRating || 3,
+        cableLength: f.cableLength || 20,
+        cableCrossSection: f.cableCrossSection || 1.5,
+        minLoadVoltage: f.minLoadVoltage != null ? f.minLoadVoltage : ((state.supplyVoltage || 24) * (1 - ((f.maxVoltageDrop != null ? f.maxVoltageDrop : 5) / 100))),
+        safetyMargin: f.safetyMargin != null ? f.safetyMargin : 20,
+        rows: (f.rows || []).map(r => makeRow(r.name, r.current, r.qty, r.note)),
+    }));
+    if (state.library) {
+        componentLibrary = state.library;
+        saveLibrary();
+    }
+    if (feeds.length === 0) feeds = [makeFeed('PWR Feed 1')];
+    activeTab = 0;
+    render();
+}
+
+function saveJson() {
+    const state = getAppState();
+    const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const name = document.getElementById('projectName').value.trim() || 'power_calc_24v';
+    a.download = name.replace(/[\\/:*?"<>|]/g, '_') + '.json';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('🧾 Project saved!');
+}
+
+function triggerJsonLoad() {
+    document.getElementById('jsonFileInput').click();
+}
+
+document.getElementById('jsonFileInput').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+        try {
+            const state = JSON.parse(ev.target.result);
+            applyAppState(state);
+            showToast('📂 Project loaded!');
+        } catch(err) {
+            showToast('⚠️ Failed to load file: ' + err.message);
+        }
+    };
+    reader.readAsText(file, 'utf-8');
+    e.target.value = '';
+});
+
+// ===================== EXCEL EXPORT =====================
+
+async function exportExcel() {
+    if (typeof ExcelJS === 'undefined') {
+        showToast('⚠️ ExcelJS library not loaded'); return;
+    }
+
+    const wb = new ExcelJS.Workbook();
+    const supplyV = getSupplyVoltage();
+    const projectName = document.getElementById('projectName').value.trim() || '24V DC Power Calc';
+
+    feeds.forEach(feed => {
+        const sheetName = feed.name.substring(0, 31).replace(/[\\/:*?\[\]]/g, '_');
+        const ws = wb.addWorksheet(sheetName);
+
+        ws.columns = [
+            { key: 'comp', width: 32 },
+            { key: 'current', width: 16 },
+            { key: 'qty', width: 10 },
+            { key: 'totalA', width: 16 },
+            { key: 'totalW', width: 16 },
+            { key: 'note', width: 24 },
+        ];
+
+        // Title
+        const titleRow = ws.addRow([feed.name + ' — 24V DC Load Calculation']);
+        ws.mergeCells(titleRow.number, 1, titleRow.number, 6);
+        titleRow.getCell(1).font = { bold: true, size: 14 };
+        ws.addRow([]);
+
+        // Feed parameters
+        ws.addRow(['Supply Voltage:', supplyV + ' V DC']);
+        ws.addRow(['Fuse Rating:', feed.fuseRating + ' A']);
+        ws.addRow(['Cable:', feed.cableCrossSection + ' mm², ' + feed.cableLength + ' m (one-way)']);
+        ws.addRow(['Safety Margin:', feed.safetyMargin + '%']);
+        ws.addRow(['Min Load Voltage:', feed.minLoadVoltage + ' V']);
+        ws.addRow([]);
+
+        // Header
+        const headerRow = ws.addRow(['Component', 'Current/Unit (A)', 'Qty', 'Total (A)', 'Power (W)', 'Note']);
+        headerRow.font = { bold: true };
+        headerRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } }; });
+
+        // Rows
+        let totalCurrent = 0;
+        feed.rows.forEach(r => {
+            const totalA = r.qty * r.current;
+            const totalW = totalA * supplyV;
+            totalCurrent += totalA;
+            ws.addRow([r.name, r.current, r.qty, totalA, totalW, r.note || '']);
+        });
+
+        ws.addRow([]);
+        const sumRow = ws.addRow(['', '', '', totalCurrent, totalCurrent * supplyV, '']);
+        sumRow.getCell(3).value = 'Total:';
+        sumRow.getCell(3).font = { bold: true };
+        sumRow.getCell(4).font = { bold: true };
+        sumRow.getCell(5).font = { bold: true };
+
+        const marginRow = ws.addRow(['', '', '', totalCurrent * (1 + feed.safetyMargin / 100), '', '']);
+        marginRow.getCell(3).value = 'With ' + feed.safetyMargin + '% margin:';
+        marginRow.getCell(3).font = { bold: true };
+        marginRow.getCell(4).font = { bold: true, color: { argb: 'FF2563EB' } };
+
+        // Voltage drop
+        ws.addRow([]);
+        const vdrop = calcVoltageDrop(totalCurrent, feed.cableLength, feed.cableCrossSection, supplyV);
+        ws.addRow(['Voltage Drop:', vdrop.dropV.toFixed(3) + ' V (' + vdrop.dropPct.toFixed(2) + '%)']);
+        ws.addRow(['Voltage at Load:', (supplyV - vdrop.dropV).toFixed(2) + ' V']);
+        ws.addRow(['Recommended Fuse:', recommendFuse(totalCurrent, feed.safetyMargin) + ' A']);
+
+        // Number format
+        ws.eachRow(row => {
+            [2,3,4,5].forEach(col => {
+                const cell = row.getCell(col);
+                if (typeof cell.value === 'number') {
+                    cell.numFmt = col <= 2 ? '#,##0.000' : col === 5 ? '#,##0.0' : '#,##0.000';
+                    cell.alignment = { horizontal: 'right' };
+                }
+            });
+        });
+    });
+
+    // Summary sheet
+    if (feeds.length > 1) {
+        const summary = wb.addWorksheet('Summary');
+        summary.columns = [
+            { key: 'name', width: 22 },
+            { key: 'comps', width: 12 },
+            { key: 'current', width: 14 },
+            { key: 'margin', width: 16 },
+            { key: 'power', width: 14 },
+            { key: 'fuse', width: 10 },
+            { key: 'cable', width: 20 },
+            { key: 'vdrop', width: 14 },
+            { key: 'status', width: 12 },
+        ];
+        const hRow = summary.addRow(['Feed', 'Components', 'Current (A)', 'With Margin (A)', 'Power (W)', 'Fuse (A)', 'Cable', 'Load Voltage (V)', 'Status']);
+        hRow.font = { bold: true };
+
+        let allCurrent = 0, allPower = 0;
+        feeds.forEach(feed => {
+            const total = sumCurrent(feed.rows);
+            const margin = total * (1 + feed.safetyMargin / 100);
+            const power = total * supplyV;
+            const compCount = feed.rows.reduce((s, r) => s + r.qty, 0);
+            const vdrop = calcVoltageDrop(total, feed.cableLength, feed.cableCrossSection, supplyV);
+            allCurrent += total;
+            allPower += power;
+            const fuseOk = margin <= feed.fuseRating;
+            const loadVoltage = supplyV - vdrop.dropV;
+            const voltageOk = loadVoltage >= feed.minLoadVoltage;
+            summary.addRow([feed.name, compCount, total, margin, power, feed.fuseRating, feed.cableCrossSection + ' mm² / ' + feed.cableLength + ' m', loadVoltage, (fuseOk && voltageOk) ? 'OK' : 'CHECK']);
+        });
+        const totRow = summary.addRow(['TOTAL', '', allCurrent, '', allPower, '', '', '', '']);
+        totRow.font = { bold: true };
+    }
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const fname = (document.getElementById('projectName').value.trim() || 'power_calc_24v').replace(/[\\/:*?"<>|]/g, '_');
+    a.download = fname + '.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('📊 Excel exported!');
+}
+
+// ===================== COPY SUMMARY =====================
+
+function copyProjectSummary() {
+    const supplyV = getSupplyVoltage();
+    let text = '24V DC Power Calculation Summary\n';
+    text += '================================\n';
+    const pName = document.getElementById('projectName').value.trim();
+    if (pName) text += 'Project: ' + pName + '\n';
+    text += 'Supply: ' + supplyV + ' V DC\n\n';
+
+    let allCurrent = 0;
+    feeds.forEach(feed => {
+        const total = sumCurrent(feed.rows);
+        const margin = total * (1 + feed.safetyMargin / 100);
+        const vdrop = calcVoltageDrop(total, feed.cableLength, feed.cableCrossSection, supplyV);
+        allCurrent += total;
+
+        text += feed.name + '\n';
+        text += '  Components: ' + feed.rows.filter(r => r.qty > 0).map(r => r.qty + '× ' + r.name).join(', ') + '\n';
+        text += '  Current:  ' + total.toFixed(3) + ' A (with ' + feed.safetyMargin + '% margin: ' + margin.toFixed(3) + ' A)\n';
+        text += '  Fuse:     ' + feed.fuseRating + ' A\n';
+        text += '  Cable:    ' + feed.cableCrossSection + ' mm², ' + feed.cableLength + ' m\n';
+        text += '  V Drop:   ' + vdrop.dropV.toFixed(3) + ' V (' + vdrop.dropPct.toFixed(1) + '%)\n\n';
+    });
+
+    text += '--------------------------------\n';
+    text += 'Total Current: ' + allCurrent.toFixed(3) + ' A\n';
+    text += 'Total Power:   ' + (allCurrent * supplyV).toFixed(1) + ' W\n';
+
+    navigator.clipboard.writeText(text).then(() => showToast('📋 Summary copied!'));
+}
+
+// ===================== CLEAR =====================
+
+function clearAll() {
+    if (!confirm('Clear all feeds and start fresh?')) return;
+    feeds = [makeFeed('PWR Feed 1')];
+    activeTab = 0;
+    document.getElementById('projectName').value = '';
+    document.getElementById('projectNote').value = '';
+    document.getElementById('supplyVoltage').value = 24;
+    render();
+    showToast('🗑️ All cleared!');
+}
+
+// ===================== HELPERS =====================
+
+function escapeHtml(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+function escapeAttr(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// ===================== INIT =====================
+render();
+</script>
+</body>
+</html>
