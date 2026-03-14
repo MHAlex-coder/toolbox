@@ -292,6 +292,10 @@
 
         <div class="card">
             <h2><span class="icon">📋</span> Header Information</h2>
+            <div style="margin-bottom: 12px;">
+                <label for="exportFileName" style="font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px;">Export Filename</label>
+                <input type="text" id="exportFileName" placeholder="Device" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; transition: border-color .2s;">
+            </div>
             <div class="header-grid">
                 <div class="field">
                     <label for="hdrType">Label Type</label>
@@ -863,7 +867,8 @@
                     hdrType: document.getElementById('hdrType').value,
                     hdrArticle: document.getElementById('hdrArticle').value,
                     hdrCard: document.getElementById('hdrCard').value,
-                    hdrText: document.getElementById('hdrText').value
+                    hdrText: document.getElementById('hdrText').value,
+                    exportFileName: document.getElementById('exportFileName').value
                 },
                 options: {
                     trimLeadingHyphen: document.getElementById('optTrimLeadingHyphen').checked,
@@ -887,6 +892,7 @@
             var headers = state.headers || {};
             document.getElementById('hdrType').value = headers.hdrType || 'Device labels';
             document.getElementById('hdrArticle').value = headers.hdrArticle || 'Project: Device Label';
+            document.getElementById('exportFileName').value = headers.exportFileName || '';
             document.getElementById('hdrCard').value = headers.hdrCard || 'Template: Device Lable Template.xlsm';
             document.getElementById('hdrText').value = headers.hdrText || 'Text: Arial';
 
@@ -949,7 +955,9 @@
         }
 
         function getExportBaseName() {
-            return getProjectFileName() + '_device_labels';
+            var custom = document.getElementById('exportFileName').value.trim();
+            if (custom) return custom.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+            return 'Device';
         }
 
         function copyAll() {

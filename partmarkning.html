@@ -276,6 +276,10 @@
         <!-- Header Section -->
         <div class="card">
             <h2><span class="icon">📋</span> Header Information</h2>
+            <div style="margin-bottom: 12px;">
+                <label for="exportFileName" style="font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px;">Export Filename</label>
+                <input type="text" id="exportFileName" placeholder="Conductor" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; transition: border-color .2s;">
+            </div>
             <div class="header-grid">
                 <div>
                     <label for="hdrType">Marking Type</label>
@@ -784,7 +788,8 @@
                     hdrType: document.getElementById('hdrType').value,
                     hdrArticle: document.getElementById('hdrArticle').value,
                     hdrMulticard: document.getElementById('hdrMulticard').value,
-                    hdrText: document.getElementById('hdrText').value
+                    hdrText: document.getElementById('hdrText').value,
+                    exportFileName: document.getElementById('exportFileName').value
                 },
                 options: {
                     removeSlash: document.getElementById('optRemoveSlash').checked,
@@ -805,6 +810,7 @@
             var headers = state.headers || {};
             document.getElementById('hdrType').value = headers.hdrType || 'Partmärkning i skåp';
             document.getElementById('hdrArticle').value = headers.hdrArticle || 'Article nr: ';
+            document.getElementById('exportFileName').value = headers.exportFileName || '';
             document.getElementById('hdrMulticard').value = headers.hdrMulticard || 'Multicard: KS 4/23L ge';
             document.getElementById('hdrText').value = headers.hdrText || 'Text: Arial';
 
@@ -876,7 +882,9 @@
         }
 
         function getExportBaseName() {
-            return getProjectFileName() + '_conductor';
+            var custom = document.getElementById('exportFileName').value.trim();
+            if (custom) return custom.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+            return 'Conductor';
         }
 
         function copyToExcel() {

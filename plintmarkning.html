@@ -273,6 +273,10 @@
         <!-- Header Section -->
         <div class="card">
             <h2><span class="icon">📋</span> Header Information</h2>
+            <div style="margin-bottom: 12px;">
+                <label for="exportFileName" style="font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px;">Export Filename</label>
+                <input type="text" id="exportFileName" placeholder="Terminal" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; transition: border-color .2s;">
+            </div>
             <div class="header-grid">
                 <div>
                     <label for="hdrType">Labeling Type</label>
@@ -737,7 +741,8 @@
                     hdrType: document.getElementById('hdrType').value,
                     hdrArticle: document.getElementById('hdrArticle').value,
                     hdrMulticard: document.getElementById('hdrMulticard').value,
-                    hdrText: document.getElementById('hdrText').value
+                    hdrText: document.getElementById('hdrText').value,
+                    exportFileName: document.getElementById('exportFileName').value
                 },
                 options: {
                     skipEmpty: document.getElementById('optSkipEmpty').checked,
@@ -757,6 +762,7 @@
             var headers = state.headers || {};
             document.getElementById('hdrType').value = headers.hdrType || 'Terminal Strip Labeling';
             document.getElementById('hdrArticle').value = headers.hdrArticle || 'Article No.: ';
+            document.getElementById('exportFileName').value = headers.exportFileName || '';
             document.getElementById('hdrMulticard').value = headers.hdrMulticard || 'Multicard: ';
             document.getElementById('hdrText').value = headers.hdrText || 'Text: Arial';
 
@@ -813,10 +819,9 @@
 
         // ==================== Export ====================
         function getExportBaseName() {
-            var articleValue = document.getElementById('hdrArticle').value.trim();
-            var match = articleValue.match(/(\d[\d\-_. /]*)$/);
-            var baseName = match ? match[1].trim() : 'terminal_labeling';
-            return baseName.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+            var custom = document.getElementById('exportFileName').value.trim();
+            if (custom) return custom.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+            return 'Terminal';
         }
 
         function copyToExcel() {

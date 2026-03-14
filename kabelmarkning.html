@@ -231,6 +231,10 @@
         <!-- Header Section -->
         <div class="card">
             <h2><span class="icon">📋</span> Header Information</h2>
+            <div style="margin-bottom: 12px;">
+                <label for="exportFileName" style="font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px;">Export Filename</label>
+                <input type="text" id="exportFileName" placeholder="Cable" style="width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; transition: border-color .2s;">
+            </div>
             <div class="header-grid">
                 <div>
                     <label for="hdrRows">Rows Per Label</label>
@@ -666,7 +670,8 @@
                     hdrRows: document.getElementById('hdrRows').value,
                     hdrKund: document.getElementById('hdrKund').value,
                     hdrTermo: document.getElementById('hdrTermo').value,
-                    hdrText: document.getElementById('hdrText').value
+                    hdrText: document.getElementById('hdrText').value,
+                    exportFileName: document.getElementById('exportFileName').value
                 },
                 sourceText: document.getElementById('eplanInput').value,
                 resultData: resultData
@@ -681,6 +686,7 @@
             const headers = state.headers || {};
             document.getElementById('hdrRows').value = headers.hdrRows || '2 rows';
             document.getElementById('hdrKund').value = headers.hdrKund || 'Project nr: ';
+            document.getElementById('exportFileName').value = headers.exportFileName || '';
             document.getElementById('hdrTermo').value = headers.hdrTermo || 'Thermal transfer print: PPQ Neutral GE';
             document.getElementById('hdrText').value = headers.hdrText || 'Text: Arial 3';
             document.getElementById('eplanInput').value = state.sourceText || '';
@@ -739,7 +745,9 @@
         }
 
         function getExportBaseName() {
-            return getProjectFileName() + '_cable';
+            var custom = document.getElementById('exportFileName').value.trim();
+            if (custom) return custom.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+            return 'Cable';
         }
 
         function copyToExcel() {
