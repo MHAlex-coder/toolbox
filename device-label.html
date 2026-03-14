@@ -1,0 +1,1108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Device Labels</title>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --success: #16a34a;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+            --warn-bg: #fff7ed;
+            --warn-border: #f59e0b;
+            --warn-text: #9a3412;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding: 20px;
+        }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
+        .subtitle { text-align: center; color: var(--text-light); margin-bottom: 24px; font-size: 0.9rem; }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+
+        /* Header fields */
+        .header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .header-grid label,
+        .field label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px; }
+        .header-grid input,
+        .field input,
+        .field textarea,
+        .field select {
+            width: 100%; padding: 8px 12px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem;
+            transition: border-color .2s;
+        }
+        .header-grid input:focus,
+        .field input:focus,
+        .field textarea:focus,
+        .field select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+        /* Input area */
+        .input-help { font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px; }
+        #sourceInput {
+            width: 100%; min-height: 200px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            resize: vertical; line-height: 1.6; tab-size: 4;
+        }
+        #sourceInput:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .input-info { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.8rem; color: var(--text-light); }
+
+        /* File drop zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all .2s;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(37,99,235,.04);
+            color: var(--primary);
+        }
+        .drop-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer;
+        }
+        .drop-zone .drop-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+
+        .or-divider {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .or-divider::before, .or-divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        /* Source hint */
+        .source-hint {
+            display: flex; justify-content: space-between; flex-wrap: wrap;
+            margin-bottom: 8px; font-size: 0.85rem; color: var(--text-light);
+        }
+
+        /* Banners */
+        .mode-banner,
+        .warning-banner {
+            display: none;
+            margin: 12px 0 0;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid;
+            font-size: 0.9rem;
+        }
+        .mode-banner {
+            border-color: var(--primary);
+            background: #eff6ff;
+            color: #1e40af;
+        }
+        .warning-banner {
+            border-color: var(--warn-border);
+            background: var(--warn-bg);
+            color: var(--warn-text);
+        }
+        .warning-banner strong,
+        .mode-banner strong {
+            display: block;
+            margin-bottom: 4px;
+        }
+
+        /* Options */
+        .options-grid {
+            display: flex; gap: 20px; flex-wrap: wrap;
+            margin-top: 12px; margin-bottom: 4px;
+        }
+        .option-box {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.9rem; cursor: pointer; user-select: none;
+        }
+        .option-box input[type="checkbox"] {
+            width: 16px; height: 16px; accent-color: var(--primary);
+        }
+        .option-box input[type="number"] {
+            width: 56px; padding: 4px 8px;
+            border: 1px solid var(--border); border-radius: 4px;
+            font-size: 0.9rem; text-align: center;
+        }
+
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn {
+            padding: 10px 24px; border: none; border-radius: 6px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: #fff; }
+
+        /* Result area */
+        #resultArea { display: none; }
+        .result-header {
+            background: #f8fafc; padding: 12px 16px; border-radius: 6px;
+            border: 1px solid var(--border); margin-bottom: 16px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            white-space: pre-line; color: var(--text-light);
+        }
+
+        .stats-bar { display: flex; gap: 24px; padding: 10px 0; font-size: 0.85rem; color: var(--text-light); flex-wrap: wrap; }
+        .stats-bar strong { color: var(--text); }
+
+        .view-toggle { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .view-toggle button {
+            padding: 6px 16px; border: none; background: #f8fafc;
+            cursor: pointer; font-size: 0.85rem; color: var(--text-light); transition: all .2s;
+        }
+        .view-toggle button.active { background: var(--primary); color: #fff; }
+
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+        }
+        .label-card {
+            border: 1px solid var(--border); border-radius: 8px;
+            overflow: hidden; transition: box-shadow .2s;
+        }
+        .label-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+        .label-card.long-text { border-color: var(--warn-border); }
+        .label-card-header {
+            background: #f1f5f9; padding: 6px 12px;
+            font-size: 0.8rem; font-weight: 600; color: var(--text-light);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .label-card.long-text .label-card-header {
+            background: #fff7ed;
+        }
+        .label-card-body { padding: 12px; text-align: center; }
+        .label-text {
+            font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.4;
+            padding: 8px; border: 1px dashed var(--border); border-radius: 4px;
+            background: #fffef5; min-height: 36px; cursor: text;
+            white-space: pre-line; word-break: break-all;
+        }
+        .label-text:focus { outline: none; border-color: var(--primary); background: #fff; }
+        .trace {
+            margin-top: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.78rem; color: var(--text-light); line-height: 1.4;
+        }
+
+        /* Removed labels section */
+        .removed-section {
+            display: none;
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+        }
+        .removed-section summary {
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--danger);
+        }
+        .removed-list {
+            margin-top: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .removed-list div { padding: 2px 0; }
+
+        /* Plain text output */
+        .plain-output { display: none; margin-top: 16px; }
+        #plainText {
+            width: 100%; min-height: 300px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            resize: vertical; line-height: 1.6;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #1e293b; color: #fff; padding: 12px 24px;
+            border-radius: 8px; font-size: 0.9rem;
+            opacity: 0; transform: translateY(20px); transition: all .3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        @media (max-width: 700px) {
+            .header-grid, .options-grid { grid-template-columns: 1fr; }
+            .result-grid { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏷️ Device Labels</h1>
+        <p class="subtitle">Create device labels from EPLAN / Excel data</p>
+
+        <div class="card">
+            <h2><span class="icon">📋</span> Header Information</h2>
+            <div class="header-grid">
+                <div class="field">
+                    <label for="hdrType">Label Type</label>
+                    <input type="text" id="hdrType" value="Device labels">
+                </div>
+                <div>
+                    <label for="hdrArticle">Article / Project</label>
+                    <input type="text" id="hdrArticle" value="Project: Device Label">
+                </div>
+                <div>
+                    <label for="hdrCard">Card / Template</label>
+                    <input type="text" id="hdrCard" value="Template: Device Lable Template.xlsm">
+                </div>
+                <div>
+                    <label for="hdrText">Text Format</label>
+                    <input type="text" id="hdrText" value="Text: Arial">
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><span class="icon">📥</span> Input</h2>
+            <div class="drop-zone" id="dropZone">
+                <span class="drop-icon">📂</span>
+                Drag and drop an <strong>.xlsx</strong>, <strong>.xls</strong> or <strong>.txt</strong> file here, or click to choose one
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.txt">
+            </div>
+
+            <div id="modeBanner" class="mode-banner"></div>
+            <div id="importWarning" class="warning-banner"></div>
+
+            <div class="or-divider">or paste manually</div>
+
+            <div class="source-hint">
+                <span>Supports both single-column input and A+B+C data from the Excel template.</span>
+                <span id="rowCount">0 rows loaded</span>
+            </div>
+            <textarea id="sourceInput" spellcheck="false" placeholder="Single-column example:&#10;-BT910&#10;-EF1&#10;-QM1&#10;&#10;Template mode example (tab-separated):&#10;101	-	-K1&#10;103	-	XD1"></textarea>
+            <div class="input-info">
+                <span id="detectedModeText">Mode: manual input</span>
+                <span>One row per label or tab-separated columns</span>
+            </div>
+
+            <div class="options-grid">
+                <label class="option-box">
+                    <input type="checkbox" id="optTrimLeadingHyphen">
+                    Remove leading hyphen in single-column mode
+                </label>
+                <label class="option-box">
+                    <input type="checkbox" id="optDropDuplicates">
+                    Remove duplicates in final output
+                </label>
+                <label class="option-box">
+                    <input type="checkbox" id="optFlagLong" checked>
+                    Flag labels longer than
+                    <input type="number" id="optMaxLen" min="1" max="99" value="18">
+                </label>
+                <label class="option-box">
+                    <input type="checkbox" id="optStripAfterHyphen">
+                    Remove text after first hyphen
+                </label>
+                <label class="option-box">
+                    <input type="checkbox" id="optKeepBlanks">
+                    Keep blank rows on import
+                </label>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="processData()">▶ Create Labels</button>
+                <button class="btn btn-danger" onclick="clearAll()">✕ Clear All</button>
+                <button class="btn btn-outline" onclick="loadSingleColumnExample()">💡 Example: Single Column</button>
+                <button class="btn btn-outline" onclick="loadTemplateExample()">💡 Example:Double Column </button>
+                <button class="btn btn-outline" onclick="triggerJsonLoad()">📂 Load JSON</button>
+            </div>
+        </div>
+
+        <div id="resultArea" class="card">
+            <h2>
+                <span class="icon">📤</span> Result
+                <span style="flex:1"></span>
+                <div class="view-toggle">
+                    <button class="active" onclick="switchView('cards', this)">Cards</button>
+                    <button onclick="switchView('plain', this)">Text</button>
+                </div>
+            </h2>
+
+            <div id="statsBar" class="stats-bar"></div>
+            <div id="resultHeader" class="result-header"></div>
+
+            <div id="cardView">
+                <div id="resultGrid" class="result-grid"></div>
+            </div>
+
+            <div id="plainView" class="plain-output">
+                <textarea id="plainText" spellcheck="false"></textarea>
+            </div>
+
+            <div id="removedSection" class="removed-section">
+                <details>
+                    <summary>Removed rows (<span id="removedCount">0</span>)</summary>
+                    <div id="removedList" class="removed-list"></div>
+                </details>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-success" onclick="copyToExcel()">📊 Copy to Excel</button>
+                <button class="btn btn-outline" onclick="exportExcel()">📗 Export to Excel</button>
+                <button class="btn btn-outline" onclick="copyAll()">📋 Copy Labels</button>
+                <button class="btn btn-outline" onclick="copyPlainText()">📄 Copy Text</button>
+                <button class="btn btn-outline" onclick="saveJson()">🧾 Save JSON</button>
+                <button class="btn btn-outline" onclick="downloadResult()">💾 Save TXT</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="jsonFileInput" accept=".json,application/json" hidden>
+    <div class="toast" id="toast"></div>
+
+    <script>
+        let importState = {
+            fileName: '',
+            mode: 'manual',
+            issues: { emptyRows: [] }
+        };
+        let resultData = [];
+        let removedRows = [];
+
+        function normalizeCellValue(value) {
+            if (value == null) return '';
+            if (typeof value === 'object') {
+                if (Array.isArray(value.richText)) {
+                    return value.richText.map(function(part) {
+                        return part && part.text ? part.text : '';
+                    }).join('').trim();
+                }
+                if (value.text != null) return String(value.text).trim();
+                if (value.result != null) return String(value.result).trim();
+            }
+            return String(value).trim();
+        }
+
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+
+        function collapseSpaces(text) {
+            return String(text).replace(/\s+/g, ' ').trim();
+        }
+
+        function summarizeRows(rows, maxItems) {
+            if (rows.length <= maxItems) return rows.join(', ');
+            return rows.slice(0, maxItems).join(', ') + ' +' + (rows.length - maxItems) + ' more';
+        }
+
+        function buildModeMessage(mode, rowCount, fileName) {
+            if (mode === 'template') {
+                return '<strong>Template mode detected in ' + escapeHtml(fileName) + '.</strong>Column B or C contains data, so the VBA flow runs: A + B + C, replace "- -", and optionally remove text to the right of the first hyphen.';
+            }
+            if (mode === 'single-column') {
+                return '<strong>Single-column mode detected in ' + escapeHtml(fileName) + '.</strong>' + rowCount + ' rows were loaded from column A. They are used directly as device labels.';
+            }
+            return '<strong>Manual input.</strong>Paste one label per row or tab-separated A-B-C columns.';
+        }
+
+        function updateModeBanner(mode, rowCount, fileName) {
+            var banner = document.getElementById('modeBanner');
+            banner.innerHTML = buildModeMessage(mode, rowCount, fileName || 'manual input');
+            banner.style.display = 'block';
+            document.getElementById('detectedModeText').textContent = 'Mode: ' + mode;
+        }
+
+        function updateImportWarning(issues, fileName) {
+            importState.issues = issues;
+            var banner = document.getElementById('importWarning');
+            if (!issues.emptyRows.length) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+
+            banner.innerHTML =
+                '<strong>Blank rows were found in ' + escapeHtml(fileName) + '.</strong>' +
+                'This can cause missing labels unless you choose to keep blank rows.' +
+                '<div>Rows: ' + summarizeRows(issues.emptyRows, 10) + '</div>';
+            banner.style.display = 'block';
+        }
+
+        function clearImportMessages() {
+            importState = {
+                fileName: '',
+                mode: 'manual',
+                issues: { emptyRows: [] }
+            };
+            document.getElementById('modeBanner').style.display = 'none';
+            document.getElementById('importWarning').style.display = 'none';
+            document.getElementById('importWarning').innerHTML = '';
+            document.getElementById('detectedModeText').textContent = 'Mode: manual input';
+        }
+
+        function detectManualMode(text) {
+            var lines = text.split(/\r?\n/).filter(function(line) {
+                return line.trim() !== '';
+            });
+            // Count raw tab-separated columns (including empty ones)
+            var hasTabbedColumns = lines.some(function(line) {
+                return line.split('\t').length >= 3;
+            });
+            return hasTabbedColumns ? 'template' : 'single-column';
+        }
+
+        function analyzeWorksheet(worksheet) {
+            var lastDataRow = 0;
+            for (var rowNumber = worksheet.rowCount; rowNumber >= 1; rowNumber--) {
+                var row = worksheet.getRow(rowNumber);
+                var a = normalizeCellValue(row.getCell(1).value);
+                var b = normalizeCellValue(row.getCell(2).value);
+                var c = normalizeCellValue(row.getCell(3).value);
+                if (a !== '' || b !== '' || c !== '') {
+                    lastDataRow = rowNumber;
+                    break;
+                }
+            }
+
+            var issues = { emptyRows: [] };
+            var rows = [];
+            var hasSecondOrThirdColumn = false;
+
+            for (var current = 1; current <= lastDataRow; current++) {
+                var sourceRow = worksheet.getRow(current);
+                var valueA = normalizeCellValue(sourceRow.getCell(1).value);
+                var valueB = normalizeCellValue(sourceRow.getCell(2).value);
+                var valueC = normalizeCellValue(sourceRow.getCell(3).value);
+
+                if (valueB !== '' || valueC !== '') {
+                    hasSecondOrThirdColumn = true;
+                }
+
+                if (valueA === '' && valueB === '' && valueC === '') {
+                    issues.emptyRows.push(current);
+                    continue;
+                }
+
+                rows.push({ row: current, a: valueA, b: valueB, c: valueC });
+            }
+
+            return {
+                mode: hasSecondOrThirdColumn ? 'template' : 'single-column',
+                rows: rows,
+                issues: issues
+            };
+        }
+
+        function parseTxtFile(content) {
+            var lines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            var rows = [];
+            var issues = { emptyRows: [] };
+            var hasTabbedColumns = false;
+
+            for (var i = 0; i < lines.length; i++) {
+                var rawLine = lines[i];
+                if (rawLine.trim() === '') {
+                    issues.emptyRows.push(i + 1);
+                    continue;
+                }
+
+                var parts = rawLine.split('\t');
+                if (parts.length >= 3) {
+                    hasTabbedColumns = true;
+                    rows.push({
+                        row: i + 1,
+                        a: parts[0].trim(),
+                        b: (parts[1] || '').trim(),
+                        c: (parts[2] || '').trim()
+                    });
+                } else {
+                    rows.push({ row: i + 1, a: rawLine.trim(), b: '', c: '' });
+                }
+            }
+
+            return {
+                mode: hasTabbedColumns ? 'template' : 'single-column',
+                rows: rows,
+                issues: issues
+            };
+        }
+
+        async function handleFile(file) {
+            if (!file) return;
+
+            try {
+                var lowerName = file.name.toLowerCase();
+                var parsed;
+
+                if (lowerName.endsWith('.txt') || lowerName.endsWith('.csv')) {
+                    var textContent = await file.text();
+                    parsed = parseTxtFile(textContent);
+                } else {
+                    var workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(await file.arrayBuffer());
+                    parsed = analyzeWorksheet(workbook.worksheets[0]);
+                }
+
+                importState.fileName = file.name;
+                importState.mode = parsed.mode;
+                updateModeBanner(parsed.mode, parsed.rows.length, file.name);
+                updateImportWarning(parsed.issues, file.name);
+                populateInputFromRows(parsed.rows, parsed.mode);
+                showToast(parsed.rows.length + ' rows imported from ' + file.name);
+            } catch (error) {
+                showToast('Could not read file: ' + error.message);
+            }
+        }
+
+        function populateInputFromRows(rows, mode) {
+            var lines = rows.map(function(entry) {
+                if (mode === 'template') {
+                    return [entry.a, entry.b, entry.c].join('\t').trimEnd();
+                }
+                return entry.a;
+            });
+            document.getElementById('sourceInput').value = lines.join('\n');
+            updateRowCount();
+        }
+
+        function updateRowCount() {
+            var text = document.getElementById('sourceInput').value;
+            var count = text.split(/\r?\n/).filter(function(line) { return line.trim() !== ''; }).length;
+            document.getElementById('rowCount').textContent = count + ' rows loaded';
+
+            if (text.trim() !== '' && importState.mode === 'manual') {
+                var manualMode = detectManualMode(text);
+                document.getElementById('detectedModeText').textContent = 'Mode: ' + manualMode;
+            }
+        }
+
+        function vbaMergeColumns(a, b, c) {
+            // If B is empty, insert a hyphen as separator (matches template convention)
+            var separator = b || '-';
+            return collapseSpaces([a, separator, c].join(' '));
+        }
+
+        function vbaRemoveDoubleHyphens(text) {
+            // "- -" → "-", then collapse spaces around remaining hyphens
+            return String(text).replace(/-\s+-/g, '-').replace(/\s*-\s*/g, '-');
+        }
+
+        function vbaRemoveTextRightOfFirstHyphen(text) {
+            var index = String(text).indexOf('-');
+            if (index === -1) return collapseSpaces(text);
+            return collapseSpaces(String(text).slice(0, index));
+        }
+
+        function processTemplateRow(row, stripAfterHyphen) {
+            var merged = vbaMergeColumns(row.a, row.b, row.c);
+            var cleanedDouble = vbaRemoveDoubleHyphens(merged);
+            var finalText = cleanedDouble;
+            var traceLines = 'A+B+C: ' + merged + '\nCleaned: ' + cleanedDouble;
+            if (stripAfterHyphen) {
+                finalText = vbaRemoveTextRightOfFirstHyphen(cleanedDouble);
+                traceLines += '\nAfter first hyphen removed: ' + finalText;
+            }
+            return {
+                text: collapseSpaces(finalText),
+                trace: traceLines,
+                source: row
+            };
+        }
+
+        function processSingleRow(row, removeLeadingHyphen) {
+            var finalText = row.a;
+            if (removeLeadingHyphen) {
+                finalText = finalText.replace(/^-+/, '');
+            }
+            return {
+                text: collapseSpaces(finalText),
+                trace: 'Column A: ' + row.a,
+                source: row
+            };
+        }
+
+        function parseManualRows() {
+            var keepBlanks = document.getElementById('optKeepBlanks').checked;
+            var lines = document.getElementById('sourceInput').value.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            var mode = detectManualMode(document.getElementById('sourceInput').value);
+            var rows = [];
+            var issues = { emptyRows: [] };
+
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i];
+                if (line.trim() === '') {
+                    issues.emptyRows.push(i + 1);
+                    if (!keepBlanks) {
+                        continue;
+                    }
+                }
+
+                if (mode === 'template') {
+                    var parts = line.split('\t');
+                    rows.push({ row: i + 1, a: (parts[0] || '').trim(), b: (parts[1] || '').trim(), c: (parts[2] || '').trim() });
+                } else {
+                    rows.push({ row: i + 1, a: line.trim(), b: '', c: '' });
+                }
+            }
+
+            return { mode: mode, rows: rows, issues: issues };
+        }
+
+        function processData() {
+            var sourceText = document.getElementById('sourceInput').value;
+            if (!sourceText.trim()) {
+                showToast('No data to process.');
+                return;
+            }
+
+            var manualParse = parseManualRows();
+            if (manualParse.issues.emptyRows.length && !document.getElementById('optKeepBlanks').checked) {
+                updateImportWarning(manualParse.issues, importState.fileName || 'manual input');
+            }
+
+            importState.mode = manualParse.mode;
+            if (!importState.fileName) {
+                updateModeBanner(manualParse.mode, manualParse.rows.length, 'manual input');
+            }
+
+            var removeLeadingHyphen = document.getElementById('optTrimLeadingHyphen').checked;
+            var stripAfterHyphen = document.getElementById('optStripAfterHyphen').checked;
+            var dropDuplicates = document.getElementById('optDropDuplicates').checked;
+            var flagLong = document.getElementById('optFlagLong').checked;
+            var maxLen = parseInt(document.getElementById('optMaxLen').value, 10) || 18;
+            var seen = new Set();
+
+            resultData = [];
+            removedRows = [];
+
+            for (var i = 0; i < manualParse.rows.length; i++) {
+                var row = manualParse.rows[i];
+                var processed = manualParse.mode === 'template'
+                    ? processTemplateRow(row, stripAfterHyphen)
+                    : processSingleRow(row, removeLeadingHyphen);
+
+                if (!processed.text) {
+                    removedRows.push({ row: row.row, reason: 'Empty result after processing', text: row.a });
+                    continue;
+                }
+
+                if (dropDuplicates) {
+                    var duplicateKey = processed.text.toUpperCase();
+                    if (seen.has(duplicateKey)) {
+                        removedRows.push({ row: row.row, reason: 'Duplicate', text: processed.text });
+                        continue;
+                    }
+                    seen.add(duplicateKey);
+                }
+
+                resultData.push({
+                    row: row.row,
+                    text: processed.text,
+                    charCount: processed.text.length,
+                    isLong: flagLong && processed.text.length > maxLen,
+                    trace: processed.trace,
+                    sourceMode: manualParse.mode
+                });
+            }
+
+            renderResults(maxLen);
+            showToast(resultData.length + ' labels created');
+        }
+
+        function renderResults(maxLen) {
+            document.getElementById('resultArea').style.display = 'block';
+
+            var headerLines = [
+                document.getElementById('hdrType').value,
+                document.getElementById('hdrArticle').value,
+                document.getElementById('hdrCard').value,
+                document.getElementById('hdrText').value,
+                'Mode: ' + importState.mode
+            ].filter(function(line) { return line.trim() !== ''; });
+
+            document.getElementById('resultHeader').textContent = headerLines.join('\n');
+
+            var longCount = resultData.filter(function(item) { return item.isLong; }).length;
+            document.getElementById('statsBar').innerHTML =
+                '<span>Labels: <strong>' + resultData.length + '</strong></span>' +
+                '<span>Removed: <strong>' + removedRows.length + '</strong></span>' +
+                '<span>Mode: <strong>' + escapeHtml(importState.mode) + '</strong></span>' +
+                '<span>Long texts &gt; ' + maxLen + ': <strong>' + longCount + '</strong></span>';
+
+            var grid = document.getElementById('resultGrid');
+            grid.innerHTML = '';
+
+            resultData.forEach(function(item, index) {
+                var card = document.createElement('div');
+                card.className = 'label-card' + (item.isLong ? ' long-text' : '');
+                card.innerHTML =
+                    '<div class="label-card-header">' +
+                        '<span>Row ' + item.row + '</span>' +
+                        '<span>Label ' + (index + 1) + ' · ' + item.charCount + ' chars</span>' +
+                    '</div>' +
+                    '<div class="label-card-body">' +
+                        '<div class="label-text" contenteditable="true" data-index="' + index + '">' + escapeHtml(item.text) + '</div>' +
+                        '<div class="trace">' + escapeHtml(item.trace) + '</div>' +
+                    '</div>';
+                grid.appendChild(card);
+            });
+
+            grid.querySelectorAll('.label-text').forEach(function(element) {
+                element.addEventListener('input', function() {
+                    var index = parseInt(this.dataset.index, 10);
+                    var newText = this.innerText.trim();
+                    resultData[index].text = newText;
+                    resultData[index].charCount = newText.length;
+                    updatePlainText();
+                });
+            });
+
+            if (removedRows.length) {
+                document.getElementById('removedSection').style.display = 'block';
+                document.getElementById('removedCount').textContent = removedRows.length;
+                document.getElementById('removedList').innerHTML = removedRows.map(function(item) {
+                    return '<div>Row ' + item.row + ': ' + escapeHtml(item.text || '') + ' (' + escapeHtml(item.reason) + ')</div>';
+                }).join('');
+            } else {
+                document.getElementById('removedSection').style.display = 'none';
+                document.getElementById('removedList').innerHTML = '';
+            }
+
+            updatePlainText();
+            document.getElementById('resultArea').scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updatePlainText() {
+            var headerLines = [
+                document.getElementById('hdrType').value,
+                document.getElementById('hdrArticle').value,
+                document.getElementById('hdrCard').value,
+                document.getElementById('hdrText').value
+            ].filter(function(line) { return line.trim() !== ''; });
+
+            var content = headerLines.join('\n');
+            if (content) {
+                content += '\n';
+            }
+            resultData.forEach(function(item) {
+                content += item.text + '\n';
+            });
+            document.getElementById('plainText').value = content;
+        }
+
+        function switchView(view, button) {
+            document.querySelectorAll('.view-toggle button').forEach(function(btn) {
+                btn.classList.remove('active');
+            });
+            button.classList.add('active');
+            document.getElementById('cardView').style.display = view === 'cards' ? 'block' : 'none';
+            document.getElementById('plainView').style.display = view === 'plain' ? 'block' : 'none';
+        }
+
+        function getAppState() {
+            return {
+                version: 1,
+                type: 'device-labels',
+                savedAt: new Date().toISOString(),
+                importState: importState,
+                headers: {
+                    hdrType: document.getElementById('hdrType').value,
+                    hdrArticle: document.getElementById('hdrArticle').value,
+                    hdrCard: document.getElementById('hdrCard').value,
+                    hdrText: document.getElementById('hdrText').value
+                },
+                options: {
+                    trimLeadingHyphen: document.getElementById('optTrimLeadingHyphen').checked,
+                    stripAfterHyphen: document.getElementById('optStripAfterHyphen').checked,
+                    dropDuplicates: document.getElementById('optDropDuplicates').checked,
+                    flagLong: document.getElementById('optFlagLong').checked,
+                    maxLen: parseInt(document.getElementById('optMaxLen').value, 10) || 18,
+                    keepBlanks: document.getElementById('optKeepBlanks').checked
+                },
+                sourceText: document.getElementById('sourceInput').value,
+                resultData: resultData,
+                removedRows: removedRows
+            };
+        }
+
+        function applyAppState(state) {
+            if (!state || typeof state !== 'object') {
+                throw new Error('Invalid JSON file.');
+            }
+
+            var headers = state.headers || {};
+            document.getElementById('hdrType').value = headers.hdrType || 'Device labels';
+            document.getElementById('hdrArticle').value = headers.hdrArticle || 'Project: Device Label';
+            document.getElementById('hdrCard').value = headers.hdrCard || 'Template: Device Lable Template.xlsm';
+            document.getElementById('hdrText').value = headers.hdrText || 'Text: Arial';
+
+            var options = state.options || {};
+            document.getElementById('optTrimLeadingHyphen').checked = !!options.trimLeadingHyphen;
+            document.getElementById('optStripAfterHyphen').checked = !!options.stripAfterHyphen;
+            document.getElementById('optDropDuplicates').checked = !!options.dropDuplicates;
+            document.getElementById('optFlagLong').checked = options.flagLong !== false;
+            document.getElementById('optMaxLen').value = options.maxLen || 18;
+            document.getElementById('optKeepBlanks').checked = !!options.keepBlanks;
+
+            importState = state.importState || importState;
+            document.getElementById('sourceInput').value = state.sourceText || '';
+            updateRowCount();
+
+            if (importState.mode && state.sourceText) {
+                updateModeBanner(importState.mode, 0, importState.fileName || 'JSON');
+            }
+
+            resultData = Array.isArray(state.resultData) ? state.resultData : [];
+            removedRows = Array.isArray(state.removedRows) ? state.removedRows : [];
+
+            if (resultData.length) {
+                renderResults(parseInt(document.getElementById('optMaxLen').value, 10) || 18);
+            } else {
+                document.getElementById('resultArea').style.display = 'none';
+            }
+
+            showToast('JSON loaded');
+        }
+
+        function saveJson() {
+            var state = getAppState();
+            var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = getExportBaseName() + '_data.json';
+            link.click();
+            URL.revokeObjectURL(url);
+            showToast('JSON saved');
+        }
+
+        function triggerJsonLoad() {
+            document.getElementById('jsonFileInput').click();
+        }
+
+        function loadJsonFile(file) {
+            if (!file) return;
+            file.text().then(function(content) {
+                applyAppState(JSON.parse(content));
+            }).catch(function() {
+                showToast('Could not read JSON file');
+            });
+        }
+
+        function getProjectFileName() {
+            var raw = document.getElementById('hdrArticle').value.trim() || 'device-labels';
+            return raw.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+        }
+
+        function getExportBaseName() {
+            return getProjectFileName() + '_device_labels';
+        }
+
+        function copyAll() {
+            navigator.clipboard.writeText(resultData.map(function(item) { return item.text; }).join('\n')).then(function() {
+                showToast('Labels copied');
+            });
+        }
+
+        function copyPlainText() {
+            updatePlainText();
+            navigator.clipboard.writeText(document.getElementById('plainText').value).then(function() {
+                showToast('Text copied');
+            });
+        }
+
+        function copyToExcel() {
+            if (!resultData.length) {
+                showToast('No labels to copy');
+                return;
+            }
+
+            var html = '<table>' + resultData.map(function(item) {
+                return '<tr><td style="mso-number-format:\'\\@\'">' + escapeHtml(item.text) + '</td></tr>';
+            }).join('') + '</table>';
+            var plain = resultData.map(function(item) { return item.text; }).join('\n');
+
+            navigator.clipboard.write([
+                new ClipboardItem({
+                    'text/html': new Blob([html], { type: 'text/html' }),
+                    'text/plain': new Blob([plain], { type: 'text/plain' })
+                })
+            ]).then(function() {
+                showToast('Copied for Excel');
+            }).catch(function() {
+                showToast('Clipboard API is not fully supported in this browser');
+            });
+        }
+
+        async function exportExcel() {
+            if (!resultData.length) {
+                showToast('No labels to export');
+                return;
+            }
+            if (typeof ExcelJS === 'undefined') {
+                showToast('ExcelJS failed to load');
+                return;
+            }
+
+            var workbook = new ExcelJS.Workbook();
+            var worksheet = workbook.addWorksheet('DeviceLabels');
+            worksheet.columns = [{ key: 'label', width: 28 }];
+
+            resultData.forEach(function(item) {
+                var row = worksheet.addRow([item.text]);
+                row.height = 22;
+                row.getCell(1).alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+                row.getCell(1).numFmt = '@';
+            });
+
+            var buffer = await workbook.xlsx.writeBuffer();
+            var blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = getExportBaseName() + '.xlsx';
+            link.click();
+            URL.revokeObjectURL(url);
+            showToast('Excel export created');
+        }
+
+        function downloadResult() {
+            updatePlainText();
+            var blob = new Blob([document.getElementById('plainText').value], { type: 'text/plain;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = getExportBaseName() + '.txt';
+            link.click();
+            URL.revokeObjectURL(url);
+            showToast('Text file saved');
+        }
+
+        function clearAll() {
+            document.getElementById('sourceInput').value = '';
+            document.getElementById('fileInput').value = '';
+            document.getElementById('jsonFileInput').value = '';
+            document.getElementById('resultArea').style.display = 'none';
+            resultData = [];
+            removedRows = [];
+            clearImportMessages();
+            updateRowCount();
+            showToast('Everything cleared');
+        }
+
+        function loadSingleColumnExample() {
+            document.getElementById('sourceInput').value = '-BT910\n-EF1\n-EF5\n-QM1\n-QM1.1\n-GND_Braid\n-K100\n-XPE';
+            importState.mode = 'single-column';
+            importState.fileName = 'Pxxxx Postmärkning.xlsx';
+            updateModeBanner('single-column', 8, importState.fileName);
+            updateRowCount();
+            showToast('Single-column example loaded');
+        }
+
+        function loadTemplateExample() {
+            document.getElementById('sourceInput').value = '101\t-\t-K1\n101\t-\t-KFH1\n103\t-\tXD1\n103\t-\tXF1\n105\t-\t-KFM1';
+            importState.mode = 'template';
+            importState.fileName = 'Device Lable Template.xlsm';
+            updateModeBanner('template', 5, importState.fileName);
+            updateRowCount();
+            showToast('VBA template example loaded');
+        }
+
+        function showToast(message) {
+            var toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.classList.add('show');
+            clearTimeout(showToast._timer);
+            showToast._timer = setTimeout(function() {
+                toast.classList.remove('show');
+            }, 2400);
+        }
+
+        document.getElementById('fileInput').addEventListener('change', function(event) {
+            handleFile(event.target.files[0]);
+        });
+
+        document.getElementById('jsonFileInput').addEventListener('change', function(event) {
+            loadJsonFile(event.target.files[0]);
+        });
+
+        document.getElementById('sourceInput').addEventListener('input', function() {
+            if (!importState.fileName) {
+                importState.mode = 'manual';
+            }
+            updateRowCount();
+        });
+
+        var dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', function(event) {
+            event.preventDefault();
+            dropZone.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', function() {
+            dropZone.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', function(event) {
+            event.preventDefault();
+            dropZone.classList.remove('drag-over');
+            handleFile(event.dataTransfer.files[0]);
+        });
+
+        clearImportMessages();
+        updateRowCount();
+    </script>
+</body>
+</html>

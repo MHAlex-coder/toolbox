@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal Strip Labeling</title>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --success: #16a34a;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+            --warn-bg: #fff7ed;
+            --warn-border: #f59e0b;
+            --warn-text: #9a3412;
+            --group-header-bg: #eff6ff;
+            --group-header-border: #bfdbfe;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding: 20px;
+        }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
+        .subtitle { text-align: center; color: var(--text-light); margin-bottom: 24px; font-size: 0.9rem; }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+
+        /* Header fields */
+        .header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .header-grid label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px; }
+        .header-grid input {
+            width: 100%; padding: 8px 12px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem;
+            transition: border-color .2s;
+        }
+        .header-grid input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+        /* Input area */
+        .input-help { font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px; }
+        #eplanInput {
+            width: 100%; min-height: 200px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            resize: vertical; line-height: 1.6; tab-size: 4;
+        }
+        #eplanInput:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .input-info { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.8rem; color: var(--text-light); }
+
+        /* File drop zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all .2s;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(37,99,235,.04);
+            color: var(--primary);
+        }
+        .drop-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer;
+        }
+        .drop-zone .drop-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+        .or-divider {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .or-divider::before, .or-divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        /* Options */
+        .options-row {
+            display: flex; gap: 20px; flex-wrap: wrap;
+            margin-top: 12px; margin-bottom: 4px;
+        }
+        .option-label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.9rem; cursor: pointer; user-select: none;
+        }
+        .option-label input[type="checkbox"] {
+            width: 16px; height: 16px; accent-color: var(--primary);
+        }
+
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn {
+            padding: 10px 24px; border: none; border-radius: 6px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: #fff; }
+
+        .warning-banner {
+            display: none;
+            margin: 12px 0 0;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--warn-border);
+            background: var(--warn-bg);
+            color: var(--warn-text);
+        }
+        .warning-banner strong { display: block; margin-bottom: 4px; color: #7c2d12; }
+        .warning-banner ul { margin: 8px 0 0 18px; }
+        .warning-banner li + li { margin-top: 4px; }
+
+        /* Result area */
+        #resultArea { display: none; }
+        .result-header-lines {
+            background: #f8fafc; padding: 12px 16px; border-radius: 6px;
+            border: 1px solid var(--border); margin-bottom: 16px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            white-space: pre-line; color: var(--text-light);
+        }
+
+        /* Group layout for terminal strips */
+        .strip-groups { display: flex; flex-wrap: wrap; gap: 16px; }
+        .strip-group {
+            border: 1px solid var(--border); border-radius: 8px;
+            overflow: hidden; min-width: 140px; max-width: 220px;
+            flex: 0 0 auto; transition: box-shadow .2s;
+        }
+        .strip-group:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+        .strip-group-header {
+            background: var(--group-header-bg);
+            border-bottom: 2px solid var(--group-header-border);
+            padding: 8px 14px;
+            font-weight: 700; font-size: 1rem;
+            color: var(--primary);
+            text-align: center;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .strip-group-header .pin-count {
+            font-size: 0.7rem; font-weight: 400; color: var(--text-light);
+            background: #e0e7ff; border-radius: 4px; padding: 1px 7px;
+        }
+        .strip-group-body { padding: 6px 0; }
+        .strip-pin {
+            padding: 4px 14px;
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            text-align: center;
+            border-bottom: 1px dashed var(--border);
+            cursor: text;
+            min-height: 28px;
+            transition: background .15s;
+        }
+        .strip-pin:last-child { border-bottom: none; }
+        .strip-pin:hover { background: #f8fafc; }
+        .strip-pin:focus { outline: none; background: #fffef5; }
+        .strip-pin.empty-pin { color: var(--text-light); font-style: italic; }
+
+        /* Result labels for flat view */
+        .result-labels {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 6px;
+        }
+        .label-cell {
+            padding: 6px 10px;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            text-align: center;
+            font-family: 'Arial', sans-serif;
+            font-size: 14px;
+            background: #fffef5;
+            cursor: text;
+            min-height: 32px;
+            transition: background .15s;
+        }
+        .label-cell:focus { outline: none; border-color: var(--primary); background: #fff; }
+        .label-cell.is-header {
+            background: var(--group-header-bg);
+            border-color: var(--group-header-border);
+            font-weight: 700;
+            color: var(--primary);
+            font-size: 15px;
+        }
+
+        /* Plain text output */
+        .plain-output { display: none; margin-top: 16px; }
+        #plainText {
+            width: 100%; min-height: 300px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            resize: vertical; line-height: 1.6;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #1e293b; color: #fff; padding: 12px 24px;
+            border-radius: 8px; font-size: 0.9rem;
+            opacity: 0; transform: translateY(20px); transition: all .3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* Stats bar */
+        .stats-bar { display: flex; gap: 24px; padding: 10px 0; font-size: 0.85rem; color: var(--text-light); flex-wrap: wrap; }
+        .stats-bar strong { color: var(--text); }
+
+        /* View toggle */
+        .view-toggle { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .view-toggle button {
+            padding: 6px 16px; border: none; background: #f8fafc;
+            cursor: pointer; font-size: 0.85rem; color: var(--text-light); transition: all .2s;
+        }
+        .view-toggle button.active { background: var(--primary); color: #fff; }
+
+        @media (max-width: 700px) {
+            .header-grid { grid-template-columns: 1fr; }
+            .strip-groups { flex-direction: column; }
+            .strip-group { max-width: 100%; }
+            body { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔌 Terminal Strip Labeling</h1>
+        <p class="subtitle">Create label strips for terminal blocks from EPLAN data</p>
+
+        <!-- Header Section -->
+        <div class="card">
+            <h2><span class="icon">📋</span> Header Information</h2>
+            <div class="header-grid">
+                <div>
+                    <label for="hdrType">Labeling Type</label>
+                    <input type="text" id="hdrType" value="Terminal Strip Labeling">
+                </div>
+                <div>
+                    <label for="hdrArticle">Article No.</label>
+                    <input type="text" id="hdrArticle" value="Article No.: ">
+                </div>
+                <div>
+                    <label for="hdrMulticard">Multicard</label>
+                    <input type="text" id="hdrMulticard" value="Multicard: ">
+                </div>
+                <div>
+                    <label for="hdrText">Text Format</label>
+                    <input type="text" id="hdrText" value="Text: Arial">
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="card">
+            <h2><span class="icon">📥</span> EPLAN Data</h2>
+
+            <!-- File import -->
+            <div class="drop-zone" id="dropZone">
+                <span class="drop-icon">📂</span>
+                Drag and drop an <strong>.xlsx</strong> or <strong>.txt</strong> file here, or click to browse
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.txt">
+            </div>
+
+            <div id="importWarning" class="warning-banner"></div>
+
+            <div class="or-divider">or paste manually</div>
+
+            <!-- Manual paste -->
+            <p class="input-help">
+                Paste data with two columns: <strong>Terminal name</strong> (e.g. X10) and <strong>Pin number</strong> (e.g. 1).
+                Separate with tab or semicolon. One row per terminal connection.
+            </p>
+            <textarea id="eplanInput" placeholder="Paste data here...&#10;Example:&#10;X10&#9;1&#10;X10&#9;2&#10;X10&#9;5&#10;X20&#9;1&#10;X20&#9;2&#10;X50&#9;3" spellcheck="false"></textarea>
+            <div class="input-info">
+                <span id="rowCount">0 rows loaded</span>
+                <span>Column A = terminal name, Column B = number</span>
+            </div>
+
+            <!-- Processing options -->
+            <div class="options-row">
+                <label class="option-label">
+                    <input type="checkbox" id="optSkipEmpty" checked>
+                    Skip rows without number
+                </label>
+                <label class="option-label">
+                    <input type="checkbox" id="optIncludeHeader" checked>
+                    Include terminal name as first row in each group
+                </label>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="processData()">▶ Create Label Strips</button>
+                <button class="btn btn-danger" onclick="clearAll()">✕ Clear All</button>
+                <button class="btn btn-outline" onclick="loadExample()">💡 Load Example Data</button>
+                <button class="btn btn-outline" onclick="triggerJsonLoad()">📂 Load JSON</button>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultArea" class="card">
+            <h2>
+                <span class="icon">📤</span> Results
+                <span style="flex:1"></span>
+                <div class="view-toggle">
+                    <button class="active" onclick="switchView('groups', this)">🔌 Groups</button>
+                    <button onclick="switchView('flat', this)">📋 Flat List</button>
+                    <button onclick="switchView('plain', this)">📝 Text</button>
+                </div>
+            </h2>
+            <div class="stats-bar" id="statsBar"></div>
+            <div class="result-header-lines" id="resultHeader"></div>
+
+            <!-- Group View (default) -->
+            <div id="groupView">
+                <div class="strip-groups" id="stripGroups"></div>
+            </div>
+
+            <!-- Flat View -->
+            <div id="flatView" style="display:none">
+                <div class="result-labels" id="flatLabels"></div>
+            </div>
+
+            <!-- Plain Text View -->
+            <div class="plain-output" id="plainView">
+                <textarea id="plainText" spellcheck="false"></textarea>
+            </div>
+
+            <div class="btn-row" style="margin-top:16px">
+                <button class="btn btn-success" onclick="copyToExcel()">📊 Copy for Excel</button>
+                <button class="btn btn-outline" onclick="exportExcel()">📗 Export to Excel</button>
+                <button class="btn btn-outline" onclick="copyAll()">📋 Copy All</button>
+                <button class="btn btn-outline" onclick="copyPlainText()">📄 Copy as Text</button>
+                <button class="btn btn-outline" onclick="saveJson()">🧾 Save JSON</button>
+                <button class="btn btn-outline" onclick="downloadResult()">💾 Save as Text File</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="jsonFileInput" accept=".json,application/json" hidden>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ==================== Data structures ====================
+        // Each group: { name: "X10", pins: ["1","2","5","67",...] }
+        let stripGroups = [];
+        let flatOutput = []; // the final flat list: [{text, isHeader}]
+
+        // ==================== Cell value normalization ====================
+        function normalizeCellValue(value) {
+            if (value == null) return '';
+            if (typeof value === 'object') {
+                if (Array.isArray(value.richText)) {
+                    return value.richText.map(function(part) {
+                        return part && part.text ? part.text : '';
+                    }).join('').trim();
+                }
+                if (value.text != null) return String(value.text).trim();
+                if (value.result != null) return String(value.result).trim();
+            }
+            return String(value).trim();
+        }
+
+        // ==================== XLSX Import ====================
+        function handleFile(file) {
+            if (!file) return;
+
+            if (file.name.toLowerCase().endsWith('.txt')) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        document.getElementById('eplanInput').value = e.target.result.trim();
+                        countInputRows();
+                        clearImportWarning();
+                        var lineCount = e.target.result.trim().split('\n').filter(function(l) { return l.trim(); }).length;
+                        showToast('📂 ' + lineCount + ' rows imported from ' + file.name);
+                    } catch (err) {
+                        showToast('⚠️ Could not read the file: ' + err.message);
+                    }
+                };
+                reader.readAsText(file, 'utf-8');
+                return;
+            }
+
+            var reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    var workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(e.target.result);
+                    var sheet = workbook.worksheets[0];
+
+                    var lines = [];
+                    var emptyRows = [];
+                    var lastDataRow = 0;
+
+                    for (var r = sheet.rowCount; r >= 1; r--) {
+                        var rv = normalizeCellValue(sheet.getRow(r).getCell(1).value);
+                        if (rv !== '') { lastDataRow = r; break; }
+                    }
+
+                    for (var r = 1; r <= lastDataRow; r++) {
+                        var row = sheet.getRow(r);
+                        var colA = normalizeCellValue(row.getCell(1).value);
+                        var colB = normalizeCellValue(row.getCell(2).value);
+
+                        if (colA === '' && colB === '') {
+                            emptyRows.push(r);
+                            continue;
+                        }
+
+                        lines.push(colA + '\t' + colB);
+                    }
+
+                    document.getElementById('eplanInput').value = lines.join('\n');
+                    countInputRows();
+
+                    if (emptyRows.length > 0) {
+                        updateImportWarning(emptyRows, file.name);
+                        showToast('⚠️ Empty rows found. See warning above.');
+                    } else {
+                        clearImportWarning();
+                    }
+                    showToast('📂 ' + lines.length + ' rows imported from ' + file.name);
+                } catch (err) {
+                    showToast('⚠️ Could not read the file: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function updateImportWarning(emptyRows, fileName) {
+            var banner = document.getElementById('importWarning');
+            if (!emptyRows || emptyRows.length === 0) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+            var summary = emptyRows.length <= 8
+                ? emptyRows.join(', ')
+                : emptyRows.slice(0, 8).join(', ') + ' +' + (emptyRows.length - 8) + ' more';
+            banner.innerHTML =
+                '<strong>Warning: empty rows in ' + escapeHtml(fileName) + '</strong>' +
+                'Empty rows may cause missing labels.' +
+                '<ul><li>Empty rows: ' + summary + '</li></ul>';
+            banner.style.display = 'block';
+        }
+
+        function clearImportWarning() {
+            var banner = document.getElementById('importWarning');
+            banner.style.display = 'none';
+            banner.innerHTML = '';
+        }
+
+        // File input events
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            handleFile(e.target.files[0]);
+        });
+        document.getElementById('jsonFileInput').addEventListener('change', function(e) {
+            loadJsonFile(e.target.files[0]);
+            e.target.value = '';
+        });
+
+        // Drag & drop
+        var dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            var file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        // ==================== Input parsing ====================
+        function parseInputLines(text) {
+            var lines = text.split('\n').filter(function(l) { return l.trim(); });
+            var entries = [];
+            for (var i = 0; i < lines.length; i++) {
+                var line = lines[i].trim();
+                // Try tab first, then semicolon, then multiple spaces
+                var parts;
+                if (line.indexOf('\t') !== -1) {
+                    parts = line.split('\t');
+                } else if (line.indexOf(';') !== -1) {
+                    parts = line.split(';');
+                } else {
+                    parts = line.split(/\s{2,}/);
+                }
+
+                var stripName = (parts[0] || '').trim();
+                var pinNum = (parts[1] || '').trim();
+
+                if (stripName) {
+                    entries.push({ strip: stripName, pin: pinNum });
+                }
+            }
+            return entries;
+        }
+
+        // ==================== UI Logic ====================
+        function countInputRows() {
+            var text = document.getElementById('eplanInput').value.trim();
+            var lines = text ? text.split('\n').filter(function(l) { return l.trim(); }) : [];
+            document.getElementById('rowCount').textContent = lines.length + ' rows loaded';
+        }
+
+        document.getElementById('eplanInput').addEventListener('input', countInputRows);
+
+        function processData() {
+            var input = document.getElementById('eplanInput').value.trim();
+            if (!input) { showToast('⚠️ No data to process!'); return; }
+
+            var skipEmpty = document.getElementById('optSkipEmpty').checked;
+            var includeHeader = document.getElementById('optIncludeHeader').checked;
+
+            var entries = parseInputLines(input);
+            if (entries.length === 0) { showToast('⚠️ Could not parse data!'); return; }
+
+            // Group by strip name, preserving order
+            stripGroups = [];
+            var groupMap = {};
+
+            for (var i = 0; i < entries.length; i++) {
+                var e = entries[i];
+                if (skipEmpty && e.pin === '') continue;
+
+                if (!groupMap[e.strip]) {
+                    groupMap[e.strip] = { name: e.strip, pins: [] };
+                    stripGroups.push(groupMap[e.strip]);
+                }
+                groupMap[e.strip].pins.push(e.pin);
+            }
+
+            // Build flat output
+            flatOutput = [];
+            for (var g = 0; g < stripGroups.length; g++) {
+                var group = stripGroups[g];
+                if (includeHeader) {
+                    flatOutput.push({ text: group.name, isHeader: true });
+                }
+                for (var p = 0; p < group.pins.length; p++) {
+                    flatOutput.push({ text: group.pins[p], isHeader: false });
+                }
+            }
+
+            renderResults();
+
+            var totalPins = 0;
+            for (var g = 0; g < stripGroups.length; g++) totalPins += stripGroups[g].pins.length;
+            showToast('✅ ' + stripGroups.length + ' terminal groups, ' + totalPins + ' labels created');
+        }
+
+        function renderResults() {
+            var area = document.getElementById('resultArea');
+            area.style.display = 'block';
+
+            // Header info
+            var hdr = [
+                document.getElementById('hdrType').value,
+                document.getElementById('hdrArticle').value,
+                document.getElementById('hdrMulticard').value,
+                document.getElementById('hdrText').value
+            ].filter(function(h) { return h.trim(); });
+            document.getElementById('resultHeader').textContent = hdr.join('\n');
+
+            // Stats
+            var totalPins = 0;
+            for (var g = 0; g < stripGroups.length; g++) totalPins += stripGroups[g].pins.length;
+            document.getElementById('statsBar').innerHTML =
+                '<span>Terminal groups: <strong>' + stripGroups.length + '</strong></span>' +
+                '<span>Labels: <strong>' + totalPins + '</strong></span>' +
+                '<span>Total rows in output: <strong>' + flatOutput.length + '</strong></span>';
+
+            renderGroupView();
+            renderFlatView();
+            updatePlainText();
+            area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function renderGroupView() {
+            var container = document.getElementById('stripGroups');
+            container.innerHTML = '';
+
+            for (var g = 0; g < stripGroups.length; g++) {
+                var group = stripGroups[g];
+                var div = document.createElement('div');
+                div.className = 'strip-group';
+
+                var headerHtml =
+                    '<div class="strip-group-header">' +
+                        '<span>' + escapeHtml(group.name) + '</span>' +
+                        '<span class="pin-count">' + group.pins.length + ' pcs</span>' +
+                    '</div>';
+
+                var bodyHtml = '<div class="strip-group-body">';
+                for (var p = 0; p < group.pins.length; p++) {
+                    var pinText = group.pins[p];
+                    var isEmpty = pinText === '';
+                    bodyHtml +=
+                        '<div class="strip-pin' + (isEmpty ? ' empty-pin' : '') + '" ' +
+                            'contenteditable="true" ' +
+                            'data-group="' + g + '" data-pin="' + p + '">' +
+                            (isEmpty ? '(empty)' : escapeHtml(pinText)) +
+                        '</div>';
+                }
+                bodyHtml += '</div>';
+
+                div.innerHTML = headerHtml + bodyHtml;
+                container.appendChild(div);
+            }
+
+            // Bind edit events
+            container.querySelectorAll('.strip-pin').forEach(function(el) {
+                el.addEventListener('input', function() {
+                    var gi = parseInt(this.dataset.group);
+                    var pi = parseInt(this.dataset.pin);
+                    stripGroups[gi].pins[pi] = this.innerText.trim();
+                    rebuildFlatOutput();
+                    renderFlatView();
+                    updatePlainText();
+                });
+            });
+        }
+
+        function renderFlatView() {
+            var container = document.getElementById('flatLabels');
+            container.innerHTML = '';
+
+            for (var i = 0; i < flatOutput.length; i++) {
+                var item = flatOutput[i];
+                var cell = document.createElement('div');
+                cell.className = 'label-cell' + (item.isHeader ? ' is-header' : '');
+                cell.contentEditable = 'true';
+                cell.dataset.index = i;
+                cell.textContent = item.text;
+                container.appendChild(cell);
+            }
+
+            container.querySelectorAll('.label-cell').forEach(function(el) {
+                el.addEventListener('input', function() {
+                    var idx = parseInt(this.dataset.index);
+                    flatOutput[idx].text = this.innerText.trim();
+                    updatePlainText();
+                });
+            });
+        }
+
+        function rebuildFlatOutput() {
+            var includeHeader = document.getElementById('optIncludeHeader').checked;
+            flatOutput = [];
+            for (var g = 0; g < stripGroups.length; g++) {
+                var group = stripGroups[g];
+                if (includeHeader) {
+                    flatOutput.push({ text: group.name, isHeader: true });
+                }
+                for (var p = 0; p < group.pins.length; p++) {
+                    flatOutput.push({ text: group.pins[p], isHeader: false });
+                }
+            }
+        }
+
+        function updatePlainText() {
+            var text = '';
+            for (var i = 0; i < flatOutput.length; i++) {
+                text += flatOutput[i].text + '\n';
+            }
+            document.getElementById('plainText').value = text;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function switchView(view, btn) {
+            document.querySelectorAll('.view-toggle button').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            document.getElementById('groupView').style.display = (view === 'groups') ? 'block' : 'none';
+            document.getElementById('flatView').style.display = (view === 'flat') ? 'block' : 'none';
+            document.getElementById('plainView').style.display = (view === 'plain') ? 'block' : 'none';
+        }
+
+        // ==================== JSON Save / Load ====================
+        function getAppState() {
+            return {
+                version: 1,
+                type: 'plintmarkning',
+                savedAt: new Date().toISOString(),
+                headers: {
+                    hdrType: document.getElementById('hdrType').value,
+                    hdrArticle: document.getElementById('hdrArticle').value,
+                    hdrMulticard: document.getElementById('hdrMulticard').value,
+                    hdrText: document.getElementById('hdrText').value
+                },
+                options: {
+                    skipEmpty: document.getElementById('optSkipEmpty').checked,
+                    includeHeader: document.getElementById('optIncludeHeader').checked
+                },
+                sourceText: document.getElementById('eplanInput').value,
+                stripGroups: stripGroups,
+                flatOutput: flatOutput
+            };
+        }
+
+        function applyAppState(state) {
+            if (!state || typeof state !== 'object') {
+                throw new Error('Invalid JSON file.');
+            }
+
+            var headers = state.headers || {};
+            document.getElementById('hdrType').value = headers.hdrType || 'Terminal Strip Labeling';
+            document.getElementById('hdrArticle').value = headers.hdrArticle || 'Article No.: ';
+            document.getElementById('hdrMulticard').value = headers.hdrMulticard || 'Multicard: ';
+            document.getElementById('hdrText').value = headers.hdrText || 'Text: Arial';
+
+            var options = state.options || {};
+            document.getElementById('optSkipEmpty').checked = options.skipEmpty !== false;
+            document.getElementById('optIncludeHeader').checked = options.includeHeader !== false;
+
+            document.getElementById('eplanInput').value = state.sourceText || '';
+            countInputRows();
+
+            if (Array.isArray(state.stripGroups) && state.stripGroups.length > 0) {
+                stripGroups = state.stripGroups;
+                flatOutput = Array.isArray(state.flatOutput) ? state.flatOutput : [];
+                if (flatOutput.length === 0) rebuildFlatOutput();
+                renderResults();
+                showToast('📂 JSON loaded!');
+            } else {
+                stripGroups = [];
+                flatOutput = [];
+                document.getElementById('resultArea').style.display = 'none';
+                showToast('📂 JSON loaded. Source data restored.');
+            }
+        }
+
+        function saveJson() {
+            var state = getAppState();
+            var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('🧾 JSON file saved!');
+        }
+
+        function triggerJsonLoad() {
+            document.getElementById('jsonFileInput').click();
+        }
+
+        function loadJsonFile(file) {
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var state = JSON.parse(e.target.result);
+                    applyAppState(state);
+                } catch (error) {
+                    showToast('⚠️ Could not load JSON file.');
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        // ==================== Export ====================
+        function getExportBaseName() {
+            var articleValue = document.getElementById('hdrArticle').value.trim();
+            var match = articleValue.match(/(\d[\d\-_. /]*)$/);
+            var baseName = match ? match[1].trim() : 'terminal_labeling';
+            return baseName.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+        }
+
+        function copyToExcel() {
+            var html = '<table>';
+            var cellStyle = "mso-number-format:'\\@'";
+            for (var i = 0; i < flatOutput.length; i++) {
+                var s = flatOutput[i].text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                var style = cellStyle;
+                if (flatOutput[i].isHeader) {
+                    style += ';font-weight:bold;background:#dbeafe';
+                }
+                html += '<tr><td style="' + style + '">' + s + '</td></tr>';
+            }
+            html += '</table>';
+
+            var plain = flatOutput.map(function(d) { return d.text; }).join('\n');
+
+            var htmlBlob = new Blob([html], { type: 'text/html' });
+            var textBlob = new Blob([plain], { type: 'text/plain' });
+            navigator.clipboard.write([
+                new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+            ]).then(function() {
+                showToast('📊 Copied for Excel! Paste with Ctrl+V.');
+            });
+        }
+
+        async function exportExcel() {
+            if (flatOutput.length === 0) {
+                showToast('⚠️ No labels to export!');
+                return;
+            }
+
+            if (typeof ExcelJS === 'undefined') {
+                showToast('⚠️ Excel export library could not be loaded.');
+                return;
+            }
+
+            var workbook = new ExcelJS.Workbook();
+            var worksheet = workbook.addWorksheet('Terminal Labeling');
+
+            worksheet.columns = [{ key: 'label', width: 20 }];
+
+            for (var i = 0; i < flatOutput.length; i++) {
+                var item = flatOutput[i];
+                var row = worksheet.addRow([String(item.text || '')]);
+                row.height = 22;
+                var cell = row.getCell(1);
+                cell.alignment = { vertical: 'middle', horizontal: 'center' };
+                cell.numFmt = '@';
+
+                if (item.isHeader) {
+                    cell.font = { bold: true, size: 12, color: { argb: 'FF2563EB' } };
+                    cell.fill = {
+                        type: 'pattern',
+                        pattern: 'solid',
+                        fgColor: { argb: 'FFDBEAFE' }
+                    };
+                    cell.border = {
+                        bottom: { style: 'medium', color: { argb: 'FFBFDBFE' } }
+                    };
+                }
+            }
+
+            var buffer = await workbook.xlsx.writeBuffer();
+            var blob = new Blob([buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_terminal_labeling.xlsx';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📗 Excel file exported!');
+        }
+
+        function copyAll() {
+            var lines = flatOutput.map(function(d) { return d.text; });
+            navigator.clipboard.writeText(lines.join('\n')).then(function() {
+                showToast('📋 Copied to clipboard!');
+            });
+        }
+
+        function copyPlainText() {
+            updatePlainText();
+            navigator.clipboard.writeText(document.getElementById('plainText').value).then(function() {
+                showToast('📄 Text copied to clipboard!');
+            });
+        }
+
+        function downloadResult() {
+            updatePlainText();
+            var text = document.getElementById('plainText').value;
+            var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_terminal_labeling.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('💾 File saved!');
+        }
+
+        // ==================== Clear & Example ====================
+        function clearAll() {
+            document.getElementById('eplanInput').value = '';
+            document.getElementById('resultArea').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+            stripGroups = [];
+            flatOutput = [];
+            clearImportWarning();
+            countInputRows();
+            showToast('🗑️ All cleared!');
+        }
+
+        function loadExample() {
+            document.getElementById('eplanInput').value =
+                'X10\t1\n' +
+                'X10\t2\n' +
+                'X10\t5\n' +
+                'X10\t67\n' +
+                'X10\t8\n' +
+                'X10\t9\n' +
+                'X10\t98\n' +
+                'X10\t8\n' +
+                'X10\t7\n' +
+                'X10\t6\n' +
+                'X10\t6\n' +
+                'X20\t1\n' +
+                'X20\t2\n' +
+                'X20\t5\n' +
+                'X20\t67\n' +
+                'X20\t8\n' +
+                'X20\t9\n' +
+                'X20\t98\n' +
+                'X20\t8\n' +
+                'X20\t7\n' +
+                'X20\t6\n' +
+                'X20\t6\n' +
+                'X50\t\n' +
+                'X50\t2\n' +
+                'X50\t3\n' +
+                'X50\t4\n' +
+                'X50\t5\n' +
+                'X50\t67\n' +
+                'X50\t8\n' +
+                'X50\t9';
+            clearImportWarning();
+            countInputRows();
+            showToast('💡 Example data loaded!');
+        }
+
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(function() { t.classList.remove('show'); }, 2500);
+        }
+
+        countInputRows();
+    </script>
+</body>
+</html>

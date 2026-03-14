@@ -1,0 +1,1020 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conductor Marking</title>
+    <!-- SheetJS for .xlsx import -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --success: #16a34a;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+            --warn-bg: #fff7ed;
+            --warn-border: #f59e0b;
+            --warn-text: #9a3412;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding: 20px;
+        }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
+        .subtitle { text-align: center; color: var(--text-light); margin-bottom: 24px; font-size: 0.9rem; }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+
+        /* Header fields */
+        .header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .header-grid label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px; }
+        .header-grid input {
+            width: 100%; padding: 8px 12px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem;
+            transition: border-color .2s;
+        }
+        .header-grid input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+        /* Input area */
+        .input-help { font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px; }
+        #eplanInput {
+            width: 100%; min-height: 200px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            resize: vertical; line-height: 1.6; tab-size: 4;
+        }
+        #eplanInput:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .input-info { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.8rem; color: var(--text-light); }
+
+        /* File drop zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all .2s;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(37,99,235,.04);
+            color: var(--primary);
+        }
+        .drop-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer;
+        }
+        .drop-zone .drop-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+        .or-divider {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .or-divider::before, .or-divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        /* Checkboxes / options */
+        .options-row {
+            display: flex; gap: 20px; flex-wrap: wrap;
+            margin-top: 12px; margin-bottom: 4px;
+        }
+        .option-label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.9rem; cursor: pointer; user-select: none;
+        }
+        .option-label input[type="checkbox"] {
+            width: 16px; height: 16px; accent-color: var(--primary);
+        }
+
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn {
+            padding: 10px 24px; border: none; border-radius: 6px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: #fff; }
+
+        .warning-banner {
+            display: none;
+            margin: 12px 0 0;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid var(--warn-border);
+            background: var(--warn-bg);
+            color: var(--warn-text);
+        }
+        .warning-banner strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #7c2d12;
+        }
+        .warning-banner ul {
+            margin: 8px 0 0 18px;
+        }
+        .warning-banner li + li {
+            margin-top: 4px;
+        }
+
+        /* Result area */
+        #resultArea { display: none; }
+        .result-header-lines {
+            background: #f8fafc; padding: 12px 16px; border-radius: 6px;
+            border: 1px solid var(--border); margin-bottom: 16px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            white-space: pre-line; color: var(--text-light);
+        }
+        .result-labels {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 12px;
+        }
+        .label-card {
+            border: 1px solid var(--border); border-radius: 8px;
+            overflow: hidden; transition: box-shadow .2s;
+        }
+        .label-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+        .label-card.long-text { border-color: var(--warn-border); }
+        .label-card-header {
+            background: #f1f5f9; padding: 6px 12px;
+            font-size: 0.8rem; font-weight: 600; color: var(--text-light);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .label-card.long-text .label-card-header {
+            background: #fff7ed;
+        }
+        .label-card-header .label-num {
+            background: var(--primary); color: #fff;
+            border-radius: 4px; padding: 1px 8px; font-size: 0.75rem;
+        }
+        .label-card.long-text .label-card-header .label-num {
+            background: var(--warn-border);
+        }
+        .label-card-header .char-count {
+            font-size: 0.7rem; color: var(--text-light); font-weight: 400;
+        }
+        .label-card-body { padding: 12px; text-align: center; }
+        .label-text {
+            font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.4;
+            padding: 8px; border: 1px dashed var(--border); border-radius: 4px;
+            background: #fffef5; min-height: 36px; cursor: text;
+            white-space: pre-line; word-break: break-all;
+        }
+        .label-text:focus { outline: none; border-color: var(--primary); background: #fff; }
+
+        /* Removed labels section */
+        .removed-section {
+            margin-top: 16px;
+            padding: 12px 16px;
+            background: #fef2f2;
+            border: 1px solid #fca5a5;
+            border-radius: 8px;
+        }
+        .removed-section summary {
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            color: var(--danger);
+        }
+        .removed-list {
+            margin-top: 8px;
+            font-family: 'Consolas', 'Courier New', monospace;
+            font-size: 0.85rem;
+            color: var(--text-light);
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .removed-list div { padding: 2px 0; }
+
+        /* Plain text output */
+        .plain-output { display: none; margin-top: 16px; }
+        #plainText {
+            width: 100%; min-height: 300px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            resize: vertical; line-height: 1.6;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #1e293b; color: #fff; padding: 12px 24px;
+            border-radius: 8px; font-size: 0.9rem;
+            opacity: 0; transform: translateY(20px); transition: all .3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* Stats bar */
+        .stats-bar { display: flex; gap: 24px; padding: 10px 0; font-size: 0.85rem; color: var(--text-light); flex-wrap: wrap; }
+        .stats-bar strong { color: var(--text); }
+
+        /* View toggle */
+        .view-toggle { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .view-toggle button {
+            padding: 6px 16px; border: none; background: #f8fafc;
+            cursor: pointer; font-size: 0.85rem; color: var(--text-light); transition: all .2s;
+        }
+        .view-toggle button.active { background: var(--primary); color: #fff; }
+
+        @media (max-width: 700px) {
+            .header-grid { grid-template-columns: 1fr; }
+            .result-labels { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏷️ Conductor Marking</h1>
+        <p class="subtitle">Create conductor marking labels from EPLAN data</p>
+
+        <!-- Header Section -->
+        <div class="card">
+            <h2><span class="icon">📋</span> Header Information</h2>
+            <div class="header-grid">
+                <div>
+                    <label for="hdrType">Marking Type</label>
+                    <input type="text" id="hdrType" value="Partmärkning i skåp">
+                </div>
+                <div>
+                    <label for="hdrArticle">Article Nr</label>
+                    <input type="text" id="hdrArticle" value="Article nr: 86362066 / 816182">
+                </div>
+                <div>
+                    <label for="hdrMulticard">Multicard</label>
+                    <input type="text" id="hdrMulticard" value="Multicard: KS 4/23L ge">
+                </div>
+                <div>
+                    <label for="hdrText">Text Format</label>
+                    <input type="text" id="hdrText" value="Text: Arial">
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="card">
+            <h2><span class="icon">📥</span> EPLAN Data</h2>
+
+            <!-- File import -->
+            <div class="drop-zone" id="dropZone">
+                <span class="drop-icon">📂</span>
+                Drag and drop an <strong>.xlsx</strong> or <strong>.txt</strong> file here, or click to choose one
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv,.txt">
+            </div>
+
+            <div id="importWarning" class="warning-banner"></div>
+
+            <div class="or-divider">or paste manually</div>
+
+            <!-- Manual paste -->
+            <p class="input-help">
+                Paste one column of EPLAN conductor marking data. One label per row.
+            </p>
+            <textarea id="eplanInput" placeholder="Paste data here...&#10;Example:&#10;13.1/-BT910:4&#10;13.1/-M910:+&#10;24V2/-EF1:14&#10;/-BG01:14" spellcheck="false"></textarea>
+            <div class="input-info">
+                <span id="rowCount">0 rows loaded</span>
+                <span>One label text per row (column A)</span>
+            </div>
+
+            <!-- Processing options -->
+            <div class="options-row">
+                <label class="option-label">
+                    <input type="checkbox" id="optRemoveSlash" checked>
+                    Remove rows starting with "/" (no conductor reference)
+                </label>
+                <label class="option-label">
+                    <input type="checkbox" id="optFlagLong" checked>
+                    Flag labels longer than
+                    <input type="number" id="optMaxLen" value="18" min="1" max="99" style="width:56px; padding:4px 8px; border:1px solid var(--border); border-radius:4px; font-size:0.9rem; text-align:center;">
+                    characters
+                </label>
+            </div>
+
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="processData()">▶ Create Labels</button>
+                <button class="btn btn-danger" onclick="clearAll()">✕ Clear All</button>
+                <button class="btn btn-outline" onclick="loadExample()">💡 Load Example Data</button>
+                <button class="btn btn-outline" onclick="triggerJsonLoad()">📂 Load JSON</button>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultArea" class="card">
+            <h2>
+                <span class="icon">📤</span> Result
+                <span style="flex:1"></span>
+                <div class="view-toggle">
+                    <button class="active" onclick="switchView('cards', this)">🏷️ Cards</button>
+                    <button onclick="switchView('plain', this)">📝 Text</button>
+                </div>
+            </h2>
+            <div class="stats-bar" id="statsBar"></div>
+            <div class="result-header-lines" id="resultHeader"></div>
+
+            <!-- Card View -->
+            <div id="cardView">
+                <div class="result-labels" id="resultLabels"></div>
+            </div>
+
+            <!-- Removed rows section -->
+            <div id="removedSection" class="removed-section" style="display:none">
+                <details>
+                    <summary>Removed rows (<span id="removedCount">0</span>)</summary>
+                    <div class="removed-list" id="removedList"></div>
+                </details>
+            </div>
+
+            <!-- Plain Text View -->
+            <div class="plain-output" id="plainView">
+                <textarea id="plainText" spellcheck="false"></textarea>
+            </div>
+
+            <div class="btn-row" style="margin-top:16px">
+                <button class="btn btn-success" onclick="copyToExcel()">📊 Copy to Excel</button>
+                <button class="btn btn-outline" onclick="exportPromarkExcel()">📗 Export to Excel</button>
+                <button class="btn btn-outline" onclick="copyAll()">📋 Copy All</button>
+                <button class="btn btn-outline" onclick="copyPlainText()">📄 Copy as Text</button>
+                <button class="btn btn-outline" onclick="saveJson()">🧾 Save JSON</button>
+                <button class="btn btn-outline" onclick="downloadResult()">💾 Save as Text File</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="jsonFileInput" accept=".json,application/json" hidden>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ==================== VBA Logic Replicated ====================
+        // VBA macro "TaBortRaderMedSlash": removes rows starting with "/"
+        // VBA macro "MoveLongText": flags/moves texts longer than 18 chars
+
+        function shouldRemoveRow(text) {
+            return text.length > 0 && text[0] === '/';
+        }
+
+        function isLongText(text, maxLen) {
+            return text.length > maxLen;
+        }
+
+        // ==================== XLSX Import ====================
+
+        let importValidationState = { emptyRows: [] };
+
+        function normalizeCellValue(value) {
+            if (value == null) return '';
+            if (typeof value === 'object') {
+                if (Array.isArray(value.richText)) {
+                    return value.richText.map(function(part) {
+                        return part && part.text ? part.text : '';
+                    }).join('').trim();
+                }
+                if (value.text != null) return String(value.text).trim();
+                if (value.result != null) return String(value.result).trim();
+                if (value.hyperlink != null) return String(value.hyperlink).trim();
+            }
+            return String(value).trim();
+        }
+
+        function analyzeImportedSheet(sheet) {
+            let lastDataRow = 0;
+            for (let rowNumber = sheet.rowCount; rowNumber >= 1; rowNumber--) {
+                const row = sheet.getRow(rowNumber);
+                const val = normalizeCellValue(row.getCell(1).value);
+                if (val !== '') {
+                    lastDataRow = rowNumber;
+                    break;
+                }
+            }
+
+            const lines = [];
+            const issues = { emptyRows: [] };
+
+            for (let rowNumber = 1; rowNumber <= lastDataRow; rowNumber++) {
+                const row = sheet.getRow(rowNumber);
+                const val = normalizeCellValue(row.getCell(1).value);
+
+                if (val === '') {
+                    issues.emptyRows.push(rowNumber);
+                    continue;
+                }
+
+                lines.push(val);
+            }
+
+            return { lines, issues };
+        }
+
+        function hasImportValidationIssues(issues) {
+            return issues.emptyRows.length > 0;
+        }
+
+        function summarizeRowNumbers(rowNumbers, maxItems) {
+            if (rowNumbers.length <= maxItems) return rowNumbers.join(', ');
+            return rowNumbers.slice(0, maxItems).join(', ') + ' +' + (rowNumbers.length - maxItems) + ' more';
+        }
+
+        function updateImportWarning(issues, fileName) {
+            importValidationState = issues;
+
+            const banner = document.getElementById('importWarning');
+            if (!hasImportValidationIssues(issues)) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+
+            const messages = [];
+            if (issues.emptyRows.length > 0) {
+                messages.push('<li>Empty rows detected: ' + summarizeRowNumbers(issues.emptyRows, 8) + '.</li>');
+            }
+
+            banner.innerHTML =
+                '<strong>Warning: empty rows found in ' + escapeHtml(fileName) + '.</strong>' +
+                'This can cause labels to be missing.' +
+                '<ul>' + messages.join('') + '</ul>';
+            banner.style.display = 'block';
+        }
+
+        function clearImportWarning() {
+            updateImportWarning({ emptyRows: [] }, '');
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+
+            // Handle .txt files
+            if (file.name.toLowerCase().endsWith('.txt')) {
+                var textReader = new FileReader();
+                textReader.onload = function(e) {
+                    try {
+                        var content = e.target.result;
+                        var parsed = parseTxtFile(content);
+
+                        // Apply parsed headers if found
+                        if (parsed.headers.type) document.getElementById('hdrType').value = parsed.headers.type;
+                        if (parsed.headers.article) document.getElementById('hdrArticle').value = parsed.headers.article;
+                        if (parsed.headers.multicard) document.getElementById('hdrMulticard').value = parsed.headers.multicard;
+                        if (parsed.headers.text) document.getElementById('hdrText').value = parsed.headers.text;
+
+                        document.getElementById('eplanInput').value = parsed.lines.join('\n');
+                        countInputRows();
+                        clearImportWarning();
+                        showToast('📂 ' + parsed.lines.length + ' rows imported from ' + file.name +
+                            (parsed.headersFound ? ' (headers applied)' : ''));
+                    } catch (err) {
+                        showToast('⚠️ Failed to read file: ' + err.message);
+                    }
+                };
+                textReader.readAsText(file, 'utf-8');
+                return;
+            }
+
+            // Handle Excel files
+            var reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(e.target.result);
+                    const sheet = workbook.worksheets[0];
+
+                    const importAnalysis = analyzeImportedSheet(sheet);
+                    const lines = importAnalysis.lines;
+
+                    document.getElementById('eplanInput').value = lines.join('\n');
+                    countInputRows();
+                    updateImportWarning(importAnalysis.issues, file.name);
+                    showToast('📂 ' + lines.length + ' rows imported from ' + file.name);
+                    if (hasImportValidationIssues(importAnalysis.issues)) {
+                        showToast('⚠️ Empty rows detected. Review warning above.');
+                    }
+                } catch (err) {
+                    showToast('⚠️ Failed to read file: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        /**
+         * Parse a .txt file with the format:
+         *   Line 1: Marking type (e.g. "Partmärkning i skåp")
+         *   Line 2: Article nr: ...
+         *   Line 3: Multicard: ...
+         *   Line 4: Text: ...
+         *   Line 5: (empty)
+         *   Line 6+: label data
+         */
+        function parseTxtFile(content) {
+            var rawLines = content.replace(/\r\n/g, '\n').replace(/\r/g, '\n').split('\n');
+            var headers = { type: '', article: '', multicard: '', text: '' };
+            var headersFound = false;
+            var dataStartIndex = 0;
+
+            // Try to detect header block: look for known header patterns in first lines
+            for (var i = 0; i < Math.min(rawLines.length, 6); i++) {
+                var line = rawLines[i].trim();
+                if (/^article\s*n/i.test(line)) {
+                    headers.article = line;
+                    headersFound = true;
+                } else if (/^multicard/i.test(line)) {
+                    headers.multicard = line;
+                    headersFound = true;
+                } else if (/^text\s*:/i.test(line)) {
+                    headers.text = line;
+                    headersFound = true;
+                } else if (i === 0 && !line.match(/^[\d\/]/) && line.length > 0 && !line.match(/^[=+\-]/)) {
+                    // First line is likely the marking type if it doesn't look like data
+                    headers.type = line;
+                    headersFound = true;
+                } else if (line === '' && headersFound) {
+                    // Empty line after headers = end of header block
+                    dataStartIndex = i + 1;
+                    break;
+                }
+
+                if (headersFound) {
+                    dataStartIndex = i + 1;
+                }
+            }
+
+            // If no headers detected, treat entire file as data
+            if (!headersFound) {
+                dataStartIndex = 0;
+            }
+
+            var lines = [];
+            for (var j = dataStartIndex; j < rawLines.length; j++) {
+                var trimmed = rawLines[j].trim();
+                if (trimmed !== '') {
+                    lines.push(trimmed);
+                }
+            }
+
+            return { headers: headers, lines: lines, headersFound: headersFound };
+        }
+
+        // File input
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            handleFile(e.target.files[0]);
+        });
+        document.getElementById('jsonFileInput').addEventListener('change', function(e) {
+            loadJsonFile(e.target.files[0]);
+            e.target.value = '';
+        });
+
+        // Drag & drop
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        // ==================== UI Logic ====================
+
+        let resultData = [];
+        let removedRows = [];
+
+        function countInputRows() {
+            const text = document.getElementById('eplanInput').value.trim();
+            const lines = text ? text.split('\n').filter(function(l) { return l.trim(); }) : [];
+            document.getElementById('rowCount').textContent = lines.length + ' rows loaded';
+        }
+
+        document.getElementById('eplanInput').addEventListener('input', countInputRows);
+
+        function processData() {
+            const input = document.getElementById('eplanInput').value.trim();
+            if (!input) { showToast('⚠️ No data to process!'); return; }
+
+            if (hasImportValidationIssues(importValidationState)) {
+                showToast('⚠️ Imported file has empty rows. Labels may be missing.');
+            }
+
+            const removeSlash = document.getElementById('optRemoveSlash').checked;
+            const flagLong = document.getElementById('optFlagLong').checked;
+            const maxLen = parseInt(document.getElementById('optMaxLen').value) || 18;
+
+            const lines = input.split('\n').filter(function(l) { return l.trim(); });
+            resultData = [];
+            removedRows = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const text = lines[i].trim();
+                if (!text) continue;
+
+                // VBA: TaBortRaderMedSlash - remove rows starting with "/"
+                if (removeSlash && shouldRemoveRow(text)) {
+                    removedRows.push({ row: i + 1, text: text });
+                    continue;
+                }
+
+                const isLong = flagLong && isLongText(text, maxLen);
+                resultData.push({ text: text, row: i + 1, isLong: isLong, charCount: text.length });
+            }
+
+            renderResults();
+            var longCount = resultData.filter(function(d) { return d.isLong; }).length;
+            var msg = '✅ ' + resultData.length + ' labels created';
+            if (removedRows.length > 0) msg += ', ' + removedRows.length + ' rows removed';
+            if (longCount > 0) msg += ', ' + longCount + ' long texts flagged';
+            showToast(msg);
+        }
+
+        function renderResults() {
+            var area = document.getElementById('resultArea');
+            area.style.display = 'block';
+
+            var hdr = [
+                document.getElementById('hdrType').value,
+                document.getElementById('hdrArticle').value,
+                document.getElementById('hdrMulticard').value,
+                document.getElementById('hdrText').value
+            ].filter(function(h) { return h.trim(); });
+            document.getElementById('resultHeader').textContent = hdr.join('\n');
+
+            var longCount = resultData.filter(function(d) { return d.isLong; }).length;
+            document.getElementById('statsBar').innerHTML =
+                '<span>Labels: <strong>' + resultData.length + '</strong></span>' +
+                '<span>Removed: <strong>' + removedRows.length + '</strong></span>' +
+                (longCount > 0 ? '<span>Long texts (>18): <strong style="color:var(--warn-border)">' + longCount + '</strong></span>' : '') +
+                '<span>Header rows: <strong>' + hdr.length + '</strong></span>';
+
+            // Render label cards
+            var container = document.getElementById('resultLabels');
+            container.innerHTML = '';
+
+            for (var i = 0; i < resultData.length; i++) {
+                var d = resultData[i];
+                var card = document.createElement('div');
+                card.className = 'label-card' + (d.isLong ? ' long-text' : '');
+                card.innerHTML =
+                    '<div class="label-card-header">' +
+                        '<span>Row ' + d.row + '</span>' +
+                        '<div>' +
+                            '<span class="label-num">Label ' + (i + 1) + '</span>' +
+                            ' <span class="char-count">' + d.charCount + ' chars</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="label-card-body">' +
+                        '<div class="label-text" contenteditable="true" data-index="' + i + '">' +
+                            escapeHtml(d.text) +
+                        '</div>' +
+                    '</div>';
+                container.appendChild(card);
+            }
+
+            // Bind edit events
+            container.querySelectorAll('.label-text').forEach(function(el) {
+                el.addEventListener('input', function() {
+                    var idx = parseInt(this.dataset.index);
+                    resultData[idx].text = this.innerText.trim();
+                    resultData[idx].charCount = resultData[idx].text.length;
+                    updatePlainText();
+                });
+            });
+
+            // Render removed rows
+            var removedSection = document.getElementById('removedSection');
+            if (removedRows.length > 0) {
+                removedSection.style.display = 'block';
+                document.getElementById('removedCount').textContent = removedRows.length;
+                var removedList = document.getElementById('removedList');
+                removedList.innerHTML = '';
+                for (var j = 0; j < removedRows.length; j++) {
+                    var div = document.createElement('div');
+                    div.textContent = 'Row ' + removedRows[j].row + ': ' + removedRows[j].text;
+                    removedList.appendChild(div);
+                }
+            } else {
+                removedSection.style.display = 'none';
+            }
+
+            updatePlainText();
+            area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updatePlainText() {
+            var hdr = [
+                document.getElementById('hdrType').value,
+                document.getElementById('hdrArticle').value,
+                document.getElementById('hdrMulticard').value,
+                document.getElementById('hdrText').value
+            ].filter(function(h) { return h.trim(); });
+
+            var text = hdr.join('\n') + '\n';
+            for (var i = 0; i < resultData.length; i++) {
+                text += resultData[i].text + '\n';
+            }
+            document.getElementById('plainText').value = text;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function switchView(view, btn) {
+            document.querySelectorAll('.view-toggle button').forEach(function(b) { b.classList.remove('active'); });
+            btn.classList.add('active');
+            document.getElementById('cardView').style.display = (view === 'cards') ? 'block' : 'none';
+            document.getElementById('plainView').style.display = (view === 'plain') ? 'block' : 'none';
+        }
+
+        // ==================== JSON Save / Load ====================
+
+        function getAppState() {
+            return {
+                version: 1,
+                type: 'conductormarkning',
+                savedAt: new Date().toISOString(),
+                headers: {
+                    hdrType: document.getElementById('hdrType').value,
+                    hdrArticle: document.getElementById('hdrArticle').value,
+                    hdrMulticard: document.getElementById('hdrMulticard').value,
+                    hdrText: document.getElementById('hdrText').value
+                },
+                options: {
+                    removeSlash: document.getElementById('optRemoveSlash').checked,
+                    flagLong: document.getElementById('optFlagLong').checked,
+                    maxLen: parseInt(document.getElementById('optMaxLen').value) || 18
+                },
+                sourceText: document.getElementById('eplanInput').value,
+                resultData: resultData,
+                removedRows: removedRows
+            };
+        }
+
+        function applyAppState(state) {
+            if (!state || typeof state !== 'object') {
+                throw new Error('Invalid JSON file.');
+            }
+
+            var headers = state.headers || {};
+            document.getElementById('hdrType').value = headers.hdrType || 'Partmärkning i skåp';
+            document.getElementById('hdrArticle').value = headers.hdrArticle || 'Article nr: ';
+            document.getElementById('hdrMulticard').value = headers.hdrMulticard || 'Multicard: KS 4/23L ge';
+            document.getElementById('hdrText').value = headers.hdrText || 'Text: Arial';
+
+            var options = state.options || {};
+            document.getElementById('optRemoveSlash').checked = options.removeSlash !== false;
+            document.getElementById('optFlagLong').checked = options.flagLong !== false;
+            document.getElementById('optMaxLen').value = options.maxLen || 18;
+
+            document.getElementById('eplanInput').value = state.sourceText || '';
+            countInputRows();
+
+            if (Array.isArray(state.resultData) && state.resultData.length > 0) {
+                resultData = state.resultData.map(function(item, index) {
+                    return {
+                        text: item.text || '',
+                        row: item.row || (index + 1),
+                        isLong: item.isLong || false,
+                        charCount: item.charCount || (item.text || '').length
+                    };
+                });
+                removedRows = Array.isArray(state.removedRows) ? state.removedRows : [];
+                renderResults();
+                showToast('📂 JSON loaded successfully!');
+            } else {
+                resultData = [];
+                removedRows = [];
+                document.getElementById('resultArea').style.display = 'none';
+                showToast('📂 JSON loaded. Source data restored.');
+            }
+        }
+
+        function saveJson() {
+            var state = getAppState();
+            var blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('🧾 JSON file saved!');
+        }
+
+        function triggerJsonLoad() {
+            document.getElementById('jsonFileInput').click();
+        }
+
+        function loadJsonFile(file) {
+            if (!file) return;
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    var state = JSON.parse(e.target.result);
+                    applyAppState(state);
+                } catch (error) {
+                    showToast('⚠️ Failed to load JSON file.');
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        // ==================== Export Helpers ====================
+
+        function getProjectFileName() {
+            var articleValue = document.getElementById('hdrArticle').value.trim();
+            var match = articleValue.match(/(\d[\d\-_. /]*)$/);
+            var baseName = match ? match[1].trim() : articleValue || 'project';
+            return baseName.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+        }
+
+        function getExportBaseName() {
+            return getProjectFileName() + '_conductor';
+        }
+
+        function copyToExcel() {
+            // Build HTML table with text-format cells to prevent Excel formula parsing
+            var html = '<table>';
+            var cellStyle = "mso-number-format:'\\@'";
+            for (var i = 0; i < resultData.length; i++) {
+                var s = resultData[i].text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+                html += '<tr><td style="' + cellStyle + '">' + s + '</td></tr>';
+            }
+            html += '</table>';
+
+            var plainLines = resultData.map(function(d) { return d.text; });
+            var plain = plainLines.join('\n');
+
+            var htmlBlob = new Blob([html], { type: 'text/html' });
+            var textBlob = new Blob([plain], { type: 'text/plain' });
+            navigator.clipboard.write([
+                new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+            ]).then(function() {
+                showToast('📊 Copied for Excel! Paste with Ctrl+V.');
+            });
+        }
+
+        async function exportPromarkExcel() {
+            if (resultData.length === 0) {
+                showToast('⚠️ No labels to export!');
+                return;
+            }
+
+            if (typeof ExcelJS === 'undefined') {
+                showToast('⚠️ Excel export library failed to load.');
+                return;
+            }
+
+            var workbook = new ExcelJS.Workbook();
+            var worksheet = workbook.addWorksheet('PromarkImport');
+
+            worksheet.columns = [{ key: 'label', width: 26 }];
+
+            resultData.forEach(function(d) {
+                var row = worksheet.addRow([String(d.text || '')]);
+                row.height = 22;
+                var cell = row.getCell(1);
+                cell.alignment = {
+                    wrapText: true,
+                    vertical: 'middle',
+                    horizontal: 'center'
+                };
+                cell.numFmt = '@';
+            });
+
+            var buffer = await workbook.xlsx.writeBuffer();
+            var blob = new Blob([buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_promark_import.xlsx';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📗 Promark Excel exported!');
+        }
+
+        function copyAll() {
+            var lines = resultData.map(function(d) { return d.text; });
+            navigator.clipboard.writeText(lines.join('\n')).then(function() {
+                showToast('📋 Labels copied to clipboard!');
+            });
+        }
+
+        function copyPlainText() {
+            updatePlainText();
+            navigator.clipboard.writeText(document.getElementById('plainText').value).then(function() {
+                showToast('📄 Text copied to clipboard!');
+            });
+        }
+
+        function downloadResult() {
+            updatePlainText();
+            var text = document.getElementById('plainText').value;
+            var blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_result.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('💾 File saved!');
+        }
+
+        function clearAll() {
+            document.getElementById('eplanInput').value = '';
+            document.getElementById('resultArea').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+            resultData = [];
+            removedRows = [];
+            clearImportWarning();
+            countInputRows();
+            showToast('🗑️ Everything cleared!');
+        }
+
+        function loadExample() {
+            document.getElementById('eplanInput').value =
+                '/-BG01:14\n' +
+                '/-X50:12\n' +
+                '/-BG01:14\n' +
+                '/-X50:22\n' +
+                '13.1/-BT910:4\n' +
+                '13.1/-M910:+\n' +
+                '24V2/-EF1:14\n' +
+                '24V2/-X24:24V2\n' +
+                '11.1/-EF1:11\n' +
+                '11.1/-K701:5\n' +
+                '0V/-EF1:0V\n' +
+                '0V/-X24:0V\n' +
+                '7.1/-710.F1:2\n' +
+                '7.1/-710.QA1:1/L1\n' +
+                '100.1/-710.F1:14\n' +
+                '100.1/-K701:1\n' +
+                '15.3/-710.TA1:X2:-Uz\n' +
+                '15.3/-710.SBM1:X4:+Uz\n' +
+                '20.3/-710.QA1:2/T1\n' +
+                '20.3/-710.TA1:X1:L1';
+            clearImportWarning();
+            countInputRows();
+            showToast('💡 Example data loaded!');
+        }
+
+        function showToast(msg) {
+            var t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(function() { t.classList.remove('show'); }, 2500);
+        }
+
+        countInputRows();
+    </script>
+</body>
+</html>

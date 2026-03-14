@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cable Marking</title>
+    <!-- SheetJS for .xlsx import -->
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --success: #16a34a;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            padding: 20px;
+        }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
+        .subtitle { text-align: center; color: var(--text-light); margin-bottom: 24px; font-size: 0.9rem; }
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        .card {
+            background: var(--card);
+            border-radius: 10px;
+            box-shadow: var(--shadow);
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+
+        /* Header fields */
+        .header-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .header-grid label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); display: block; margin-bottom: 4px; }
+        .header-grid input {
+            width: 100%; padding: 8px 12px;
+            border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem;
+            transition: border-color .2s;
+        }
+        .header-grid input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+
+        /* Input area */
+        .input-help { font-size: 0.85rem; color: var(--text-light); margin-bottom: 8px; }
+        #eplanInput {
+            width: 100%; min-height: 200px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            resize: vertical; line-height: 1.6; tab-size: 4;
+        }
+        #eplanInput:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,.15); }
+        .input-info { display: flex; justify-content: space-between; margin-top: 6px; font-size: 0.8rem; color: var(--text-light); }
+
+        /* File drop zone */
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 8px;
+            padding: 24px;
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all .2s;
+            margin-bottom: 12px;
+            position: relative;
+        }
+        .drop-zone:hover, .drop-zone.drag-over {
+            border-color: var(--primary);
+            background: rgba(37,99,235,.04);
+            color: var(--primary);
+        }
+        .drop-zone input[type="file"] {
+            position: absolute; inset: 0; opacity: 0; cursor: pointer;
+        }
+        .drop-zone .drop-icon { font-size: 2rem; display: block; margin-bottom: 8px; }
+        .or-divider {
+            text-align: center;
+            color: var(--text-light);
+            font-size: 0.85rem;
+            margin: 12px 0;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .or-divider::before, .or-divider::after {
+            content: ''; flex: 1; height: 1px; background: var(--border);
+        }
+
+        /* Buttons */
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }
+        .btn {
+            padding: 10px 24px; border: none; border-radius: 6px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: #fff; }
+
+        .warning-banner {
+            display: none;
+            margin: 12px 0 0;
+            padding: 12px 14px;
+            border-radius: 8px;
+            border: 1px solid #f59e0b;
+            background: #fff7ed;
+            color: #9a3412;
+        }
+        .warning-banner strong {
+            display: block;
+            margin-bottom: 4px;
+            color: #7c2d12;
+        }
+        .warning-banner ul {
+            margin: 8px 0 0 18px;
+        }
+        .warning-banner li + li {
+            margin-top: 4px;
+        }
+
+        /* Result area */
+        #resultArea { display: none; }
+        .result-header-lines {
+            background: #f8fafc; padding: 12px 16px; border-radius: 6px;
+            border: 1px solid var(--border); margin-bottom: 16px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            white-space: pre-line; color: var(--text-light);
+        }
+        .result-labels {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 12px;
+        }
+        .label-card {
+            border: 1px solid var(--border); border-radius: 8px;
+            overflow: hidden; transition: box-shadow .2s;
+        }
+        .label-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,.1); }
+        .label-card-header {
+            background: #f1f5f9; padding: 6px 12px;
+            font-size: 0.8rem; font-weight: 600; color: var(--text-light);
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        .label-card-header .label-num {
+            background: var(--primary); color: #fff;
+            border-radius: 4px; padding: 1px 8px; font-size: 0.75rem;
+        }
+        .label-card-body { padding: 12px; text-align: center; }
+        .label-text {
+            font-family: 'Arial', sans-serif; font-size: 14px; line-height: 1.4;
+            padding: 8px; border: 1px dashed var(--border); border-radius: 4px;
+            background: #fffef5; min-height: 42px; cursor: text;
+            white-space: pre-line; word-break: break-all;
+        }
+        .label-text:focus { outline: none; border-color: var(--primary); background: #fff; }
+        .label-pair-divider { border: none; border-top: 1px dashed #cbd5e1; margin: 8px 0; }
+        .label-side {
+            font-size: 0.7rem; text-transform: uppercase; font-weight: 700;
+            color: var(--text-light); letter-spacing: 0.5px; margin-bottom: 4px;
+        }
+
+        /* Plain text output */
+        .plain-output { display: none; margin-top: 16px; }
+        #plainText {
+            width: 100%; min-height: 300px; padding: 12px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-family: 'Consolas', 'Courier New', monospace; font-size: 0.9rem;
+            resize: vertical; line-height: 1.6;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #1e293b; color: #fff; padding: 12px 24px;
+            border-radius: 8px; font-size: 0.9rem;
+            opacity: 0; transform: translateY(20px); transition: all .3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+
+        /* Stats bar */
+        .stats-bar { display: flex; gap: 24px; padding: 10px 0; font-size: 0.85rem; color: var(--text-light); }
+        .stats-bar strong { color: var(--text); }
+
+        /* View toggle */
+        .view-toggle { display: inline-flex; border-radius: 6px; overflow: hidden; border: 1px solid var(--border); }
+        .view-toggle button {
+            padding: 6px 16px; border: none; background: #f8fafc;
+            cursor: pointer; font-size: 0.85rem; color: var(--text-light); transition: all .2s;
+        }
+        .view-toggle button.active { background: var(--primary); color: #fff; }
+
+        @media (max-width: 700px) {
+            .header-grid { grid-template-columns: 1fr; }
+            .result-labels { grid-template-columns: 1fr; }
+            body { padding: 10px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚡ Cable Marking</h1>
+        <p class="subtitle">Create cable marking labels from EPLAN data</p>
+
+        <!-- Header Section -->
+        <div class="card">
+            <h2><span class="icon">📋</span> Header Information</h2>
+            <div class="header-grid">
+                <div>
+                    <label for="hdrRows">Rows Per Label</label>
+                    <input type="text" id="hdrRows" value="2 rows">
+                </div>
+                <div>
+                    <label for="hdrKund">Project Nr</label>
+                    <input type="text" id="hdrKund" value="Project nr: ">
+                </div>
+                <div>
+                    <label for="hdrTermo">Thermal Transfer Print</label>
+                    <input type="text" id="hdrTermo" value="Thermal transfer print: PPQ Neutral GE">
+                </div>
+                <div>
+                    <label for="hdrText">Text Format</label>
+                    <input type="text" id="hdrText" value="Text: Arial 3">
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Section -->
+        <div class="card">
+            <h2><span class="icon">📥</span> EPLAN Data</h2>
+
+            <!-- File import -->
+            <div class="drop-zone" id="dropZone">
+                <span class="drop-icon">📂</span>
+                Drag and drop an <strong>.xlsx</strong> file here, or click to choose one
+                <input type="file" id="fileInput" accept=".xlsx,.xls,.csv">
+            </div>
+
+            <div id="importWarning" class="warning-banner"></div>
+
+            <div class="or-divider">or paste manually</div>
+
+            <!-- Manual paste -->
+            <p class="input-help">
+                Paste 4 tab-separated columns. Columns: <strong>Text1 &nbsp; Text2 &nbsp; Text3 &nbsp; Text4</strong>
+            </p>
+            <textarea id="eplanInput" placeholder="Paste data here...&#10;Example:&#10;=P9203+102-W30.106&#9;=P9203+UH100-K153-P6&#9;=P9203+102-W30.106&#9;=P9203+102-TA1-X2x6" spellcheck="false"></textarea>
+            <div class="input-info">
+                <span id="rowCount">0 rows loaded</span>
+                <span>Tab-separated (4 columns per row)</span>
+            </div>
+            <div class="btn-row">
+                <button class="btn btn-primary" onclick="processData()">▶ Create Labels</button>
+                <button class="btn btn-danger" onclick="clearAll()">✕ Clear All</button>
+                <button class="btn btn-outline" onclick="loadExample()">💡 Load Example Data</button>
+                <button class="btn btn-outline" onclick="triggerJsonLoad()">📂 Load JSON</button>
+            </div>
+        </div>
+
+        <!-- Result Section -->
+        <div id="resultArea" class="card">
+            <h2>
+                <span class="icon">📤</span> Result
+                <span style="flex:1"></span>
+                <div class="view-toggle">
+                    <button class="active" onclick="switchView('cards', this)">🏷️ Cards</button>
+                    <button onclick="switchView('plain', this)">📝 Text</button>
+                </div>
+            </h2>
+            <div class="stats-bar" id="statsBar"></div>
+            <div class="result-header-lines" id="resultHeader"></div>
+
+            <!-- Card View -->
+            <div id="cardView">
+                <div class="result-labels" id="resultLabels"></div>
+            </div>
+
+            <!-- Plain Text View -->
+            <div class="plain-output" id="plainView">
+                <textarea id="plainText" spellcheck="false"></textarea>
+            </div>
+
+            <div class="btn-row" style="margin-top:16px">
+                <button class="btn btn-success" onclick="copyToExcel()">📊 Copy to Excel</button>
+                <button class="btn btn-outline" onclick="exportPromarkExcel()">📗 Export Promark Excel</button>
+                <button class="btn btn-outline" onclick="copyAll()">📋 Copy All</button>
+                <button class="btn btn-outline" onclick="copyPlainText()">📄 Copy as Text</button>
+                <button class="btn btn-outline" onclick="saveJson()">🧾 Save JSON</button>
+                <button class="btn btn-outline" onclick="downloadResult()">💾 Save as Text File</button>
+            </div>
+        </div>
+    </div>
+
+    <input type="file" id="jsonFileInput" accept=".json,application/json" hidden>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        // ==================== VBA Logic Replicated ====================
+
+        function removeDualEquals(text) {
+            let charCount = text.length;
+            while (charCount > 0) {
+                if (text[charCount - 1] === '=') break;
+                charCount--;
+            }
+            if (charCount > 1) {
+                text = text.substring(0, charCount - 1).trim();
+            }
+            return text;
+        }
+
+        function reduceRedundancy(textToReduce, referenceText) {
+            let charCount = 0;
+            while (charCount < textToReduce.length && textToReduce[charCount] !== '+') {
+                charCount++;
+            }
+            const prefixLen = charCount + 1;
+            if (prefixLen <= textToReduce.length && prefixLen <= referenceText.length) {
+                if (textToReduce.substring(0, prefixLen) === referenceText.substring(0, prefixLen)) {
+                    textToReduce = textToReduce.substring(charCount);
+                }
+            }
+            return textToReduce;
+        }
+
+        function processRow(text1, text2, text3, text4) {
+            text1 = text1.trim(); text2 = text2.trim();
+            text3 = text3.trim(); text4 = text4.trim();
+
+            text2 = removeDualEquals(text2);
+            text4 = removeDualEquals(text4);
+
+            text2 = reduceRedundancy(text2, text1);
+            text2 = reduceRedundancy(text2, text1);
+
+            text4 = reduceRedundancy(text4, text3);
+            text4 = reduceRedundancy(text4, text3);
+
+            return [text1 + '\n' + text2, text3 + '\n' + text4];
+        }
+
+        // ==================== XLSX Import ====================
+
+        let importValidationState = { emptyRows: [], incompleteRows: [] };
+
+        function normalizeCellValue(value) {
+            if (value == null) return '';
+            if (typeof value === 'object') {
+                if (Array.isArray(value.richText)) {
+                    return value.richText.map(function(part) {
+                        return part && part.text ? part.text : '';
+                    }).join('').trim();
+                }
+                if (value.text != null) return String(value.text).trim();
+                if (value.result != null) return String(value.result).trim();
+                if (value.hyperlink != null) return String(value.hyperlink).trim();
+            }
+            return String(value).trim();
+        }
+
+        function getMissingColumnNumbers(cols) {
+            const missing = [];
+            for (let i = 0; i < 4; i++) {
+                if (!cols[i]) missing.push(i + 1);
+            }
+            return missing;
+        }
+
+        function analyzeImportedSheet(sheet) {
+            let lastDataRow = 0;
+            for (let rowNumber = sheet.rowCount; rowNumber >= 1; rowNumber--) {
+                const row = sheet.getRow(rowNumber);
+                const cols = [1, 2, 3, 4].map(function(colNumber) {
+                    return normalizeCellValue(row.getCell(colNumber).value);
+                });
+                if (cols.some(function(value) { return value !== ''; })) {
+                    lastDataRow = rowNumber;
+                    break;
+                }
+            }
+
+            const lines = [];
+            const issues = { emptyRows: [], incompleteRows: [] };
+
+            for (let rowNumber = 1; rowNumber <= lastDataRow; rowNumber++) {
+                const row = sheet.getRow(rowNumber);
+                const cols = [1, 2, 3, 4].map(function(colNumber) {
+                    return normalizeCellValue(row.getCell(colNumber).value);
+                });
+                const filledCount = cols.filter(function(value) { return value !== ''; }).length;
+
+                if (filledCount === 0) {
+                    issues.emptyRows.push(rowNumber);
+                    continue;
+                }
+
+                if (filledCount < 4) {
+                    issues.incompleteRows.push({
+                        row: rowNumber,
+                        missingColumns: getMissingColumnNumbers(cols)
+                    });
+                }
+
+                lines.push(cols.join('\t'));
+            }
+
+            return { lines, issues };
+        }
+
+        function hasImportValidationIssues(issues) {
+            return issues.emptyRows.length > 0 || issues.incompleteRows.length > 0;
+        }
+
+        function summarizeRowNumbers(rowNumbers, maxItems) {
+            if (rowNumbers.length <= maxItems) return rowNumbers.join(', ');
+            return rowNumbers.slice(0, maxItems).join(', ') + ' +' + (rowNumbers.length - maxItems) + ' more';
+        }
+
+        function formatMissingColumns(columns) {
+            return columns.map(function(column) {
+                return 'Text' + column;
+            }).join(', ');
+        }
+
+        function updateImportWarning(issues, fileName) {
+            importValidationState = issues;
+
+            const banner = document.getElementById('importWarning');
+            if (!hasImportValidationIssues(issues)) {
+                banner.style.display = 'none';
+                banner.innerHTML = '';
+                return;
+            }
+
+            const messages = [];
+            if (issues.emptyRows.length > 0) {
+                messages.push('<li>Empty Excel rows detected: ' + summarizeRowNumbers(issues.emptyRows, 8) + '.</li>');
+            }
+            if (issues.incompleteRows.length > 0) {
+                const preview = issues.incompleteRows.slice(0, 6).map(function(item) {
+                    return 'Row ' + item.row + ' missing ' + formatMissingColumns(item.missingColumns);
+                });
+                const extraCount = issues.incompleteRows.length - preview.length;
+                messages.push('<li>Incomplete rows: ' + preview.join('; ') + (extraCount > 0 ? '; +' + extraCount + ' more' : '') + '.</li>');
+            }
+
+            banner.innerHTML =
+                '<strong>Warning: empty rows or cells found in ' + escapeHtml(fileName) + '.</strong>' +
+                'This can cause a label to be missing or incomplete.' +
+                '<ul>' + messages.join('') + '</ul>';
+            banner.style.display = 'block';
+        }
+
+        function clearImportWarning() {
+            updateImportWarning({ emptyRows: [], incompleteRows: [] }, '');
+        }
+
+        function handleFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = async function(e) {
+                try {
+                    const workbook = new ExcelJS.Workbook();
+                    await workbook.xlsx.load(e.target.result);
+                    const sheet = workbook.worksheets[0];
+
+                    const importAnalysis = analyzeImportedSheet(sheet);
+                    const lines = importAnalysis.lines;
+
+                    document.getElementById('eplanInput').value = lines.join('\n');
+                    countInputRows();
+                    updateImportWarning(importAnalysis.issues, file.name);
+                    showToast('📂 ' + lines.length + ' rows imported from ' + file.name);
+                    if (hasImportValidationIssues(importAnalysis.issues)) {
+                        showToast('⚠️ Empty Excel rows/cells detected. Review warning above.');
+                    }
+                } catch (err) {
+                    showToast('⚠️ Failed to read file: ' + err.message);
+                }
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        // File input
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            handleFile(e.target.files[0]);
+        });
+        document.getElementById('jsonFileInput').addEventListener('change', function(e) {
+            loadJsonFile(e.target.files[0]);
+            e.target.value = '';
+        });
+
+        // Drag & drop
+        const dropZone = document.getElementById('dropZone');
+        dropZone.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            this.classList.add('drag-over');
+        });
+        dropZone.addEventListener('dragleave', function() {
+            this.classList.remove('drag-over');
+        });
+        dropZone.addEventListener('drop', function(e) {
+            e.preventDefault();
+            this.classList.remove('drag-over');
+            const file = e.dataTransfer.files[0];
+            if (file) handleFile(file);
+        });
+
+        // ==================== UI Logic ====================
+
+        let resultData = [];
+
+        function countInputRows() {
+            const text = document.getElementById('eplanInput').value.trim();
+            const lines = text ? text.split('\n').filter(l => l.trim()) : [];
+            document.getElementById('rowCount').textContent = lines.length + ' rows loaded';
+        }
+
+        document.getElementById('eplanInput').addEventListener('input', countInputRows);
+
+        function processData() {
+            const input = document.getElementById('eplanInput').value.trim();
+            if (!input) { showToast('⚠️ No data to process!'); return; }
+
+            if (hasImportValidationIssues(importValidationState)) {
+                showToast('⚠️ Imported Excel has empty rows/cells. Labels may be missing or incomplete.');
+            }
+
+            const lines = input.split('\n').filter(l => l.trim());
+            resultData = [];
+
+            for (let i = 0; i < lines.length; i++) {
+                const cols = lines[i].split('\t');
+                const text1 = (cols[0] || '').trim();
+                const text2 = (cols[1] || '').trim();
+                const text3 = (cols[2] || '').trim();
+                const text4 = (cols[3] || '').trim();
+                if (!text1) continue;
+                const [label1, label2] = processRow(text1, text2, text3, text4);
+                resultData.push({ label1, label2, row: i + 1 });
+            }
+
+            renderResults();
+            showToast('✅ ' + resultData.length + ' cables processed → ' + (resultData.length * 2) + ' labels');
+        }
+
+        function renderResults() {
+            const area = document.getElementById('resultArea');
+            area.style.display = 'block';
+
+            const hdr = [
+                document.getElementById('hdrRows').value,
+                document.getElementById('hdrKund').value,
+                document.getElementById('hdrTermo').value,
+                document.getElementById('hdrText').value
+            ].filter(h => h.trim());
+            document.getElementById('resultHeader').textContent = hdr.join('\n');
+
+            document.getElementById('statsBar').innerHTML =
+                '<span>Cables: <strong>' + resultData.length + '</strong></span>' +
+                '<span>Labels: <strong>' + (resultData.length * 2) + '</strong></span>' +
+                '<span>Header rows: <strong>' + hdr.length + '</strong></span>';
+
+            const container = document.getElementById('resultLabels');
+            container.innerHTML = '';
+
+            for (let i = 0; i < resultData.length; i++) {
+                const d = resultData[i];
+                const card = document.createElement('div');
+                card.className = 'label-card';
+                card.innerHTML =
+                    '<div class="label-card-header">' +
+                        '<span>Cable ' + d.row + '</span>' +
+                        '<div>' +
+                            '<span class="label-num">Label ' + (i * 2 + 1) + '</span> ' +
+                            '<span class="label-num">Label ' + (i * 2 + 2) + '</span>' +
+                        '</div>' +
+                    '</div>' +
+                    '<div class="label-card-body">' +
+                        '<div class="label-side">End 1</div>' +
+                        '<div class="label-text" contenteditable="true" data-index="' + i + '" data-side="1">' +
+                            escapeHtml(d.label1) +
+                        '</div>' +
+                        '<hr class="label-pair-divider">' +
+                        '<div class="label-side">End 2</div>' +
+                        '<div class="label-text" contenteditable="true" data-index="' + i + '" data-side="2">' +
+                            escapeHtml(d.label2) +
+                        '</div>' +
+                    '</div>';
+                container.appendChild(card);
+            }
+
+            container.querySelectorAll('.label-text').forEach(el => {
+                el.addEventListener('input', function() {
+                    const idx = parseInt(this.dataset.index);
+                    if (this.dataset.side === '1') resultData[idx].label1 = this.innerText;
+                    else resultData[idx].label2 = this.innerText;
+                    updatePlainText();
+                });
+            });
+
+            updatePlainText();
+            area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        function updatePlainText() {
+            const hdr = [
+                document.getElementById('hdrRows').value,
+                document.getElementById('hdrKund').value,
+                document.getElementById('hdrTermo').value,
+                document.getElementById('hdrText').value
+            ].filter(h => h.trim());
+
+            let text = hdr.join('\n') + '\n';
+            for (const d of resultData) {
+                text += d.label1 + '\n';
+                text += d.label2 + '\n';
+            }
+            document.getElementById('plainText').value = text;
+        }
+
+        function escapeHtml(str) {
+            return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                      .replace(/\n/g, '<br>');
+        }
+
+        function switchView(view, btn) {
+            document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('cardView').style.display = (view === 'cards') ? 'block' : 'none';
+            document.getElementById('plainView').style.display = (view === 'plain') ? 'block' : 'none';
+        }
+
+        function getAppState() {
+            return {
+                version: 1,
+                savedAt: new Date().toISOString(),
+                headers: {
+                    hdrRows: document.getElementById('hdrRows').value,
+                    hdrKund: document.getElementById('hdrKund').value,
+                    hdrTermo: document.getElementById('hdrTermo').value,
+                    hdrText: document.getElementById('hdrText').value
+                },
+                sourceText: document.getElementById('eplanInput').value,
+                resultData: resultData
+            };
+        }
+
+        function applyAppState(state) {
+            if (!state || typeof state !== 'object') {
+                throw new Error('Invalid JSON file.');
+            }
+
+            const headers = state.headers || {};
+            document.getElementById('hdrRows').value = headers.hdrRows || '2 rows';
+            document.getElementById('hdrKund').value = headers.hdrKund || 'Project nr: ';
+            document.getElementById('hdrTermo').value = headers.hdrTermo || 'Thermal transfer print: PPQ Neutral GE';
+            document.getElementById('hdrText').value = headers.hdrText || 'Text: Arial 3';
+            document.getElementById('eplanInput').value = state.sourceText || '';
+            countInputRows();
+
+            if (Array.isArray(state.resultData) && state.resultData.length > 0) {
+                resultData = state.resultData.map((item, index) => ({
+                    label1: item.label1 || '',
+                    label2: item.label2 || '',
+                    row: item.row || (index + 1)
+                }));
+                renderResults();
+                showToast('📂 JSON loaded successfully!');
+            } else {
+                resultData = [];
+                document.getElementById('resultArea').style.display = 'none';
+                showToast('📂 JSON loaded. Source data restored.');
+            }
+        }
+
+        function saveJson() {
+            const state = getAppState();
+            const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_data.json';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('🧾 JSON file saved!');
+        }
+
+        function triggerJsonLoad() {
+            document.getElementById('jsonFileInput').click();
+        }
+
+        function loadJsonFile(file) {
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const state = JSON.parse(e.target.result);
+                    applyAppState(state);
+                } catch (error) {
+                    showToast('⚠️ Failed to load JSON file.');
+                }
+            };
+            reader.readAsText(file, 'utf-8');
+        }
+
+        function getProjectFileName() {
+            const projectValue = document.getElementById('hdrKund').value.trim();
+            const match = projectValue.match(/(\d[\d\-_. ]*)$/);
+            const baseName = match ? match[1].trim() : projectValue || 'project';
+            return baseName.replace(/[\\/:*?"<>|]/g, '_').replace(/\s+/g, '_');
+        }
+
+        function getExportBaseName() {
+            return getProjectFileName() + '_cable';
+        }
+
+        function copyToExcel() {
+            // Build an HTML table that Excel reads as single-column text cells.
+            // The mso-number-format:'\@' forces Excel to treat cells as text,
+            // preventing = and + from being parsed as formulas.
+            let html = '<table>';
+            const cellStyle = "mso-number-format:'\\@'";
+            for (const d of resultData) {
+                const s1 = d.label1.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+                const s2 = d.label2.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\n/g,'<br>');
+                html += '<tr><td style="' + cellStyle + '">' + s1 + '</td></tr>';
+                html += '<tr><td style="' + cellStyle + '">' + s2 + '</td></tr>';
+            }
+            html += '</table>';
+
+            // Write both HTML and plain text to clipboard
+            const plainLines = [];
+            for (const d of resultData) {
+                plainLines.push(d.label1);
+                plainLines.push(d.label2);
+            }
+            const plain = plainLines.join('\n');
+
+            const htmlBlob = new Blob([html], { type: 'text/html' });
+            const textBlob = new Blob([plain], { type: 'text/plain' });
+            navigator.clipboard.write([
+                new ClipboardItem({ 'text/html': htmlBlob, 'text/plain': textBlob })
+            ]).then(() => {
+                showToast('📊 Copied for Excel! Paste with Ctrl+V.');
+            });
+        }
+
+        async function exportPromarkExcel() {
+            const rows = [];
+            for (const d of resultData) {
+                rows.push(d.label1);
+                rows.push(d.label2);
+            }
+
+            if (rows.length === 0) {
+                showToast('⚠️ No labels to export!');
+                return;
+            }
+
+            if (typeof ExcelJS === 'undefined') {
+                showToast('⚠️ Excel export library failed to load.');
+                return;
+            }
+
+            const workbook = new ExcelJS.Workbook();
+            const worksheet = workbook.addWorksheet('PromarkImport');
+
+            worksheet.columns = [{ key: 'label', width: 26 }];
+
+            rows.forEach(text => {
+                const row = worksheet.addRow([String(text || '')]);
+                row.height = 28;
+                const cell = row.getCell(1);
+                cell.alignment = {
+                    wrapText: true,
+                    vertical: 'middle',
+                    horizontal: 'center'
+                };
+                cell.numFmt = '@';
+            });
+
+            const buffer = await workbook.xlsx.writeBuffer();
+            const blob = new Blob([buffer], {
+                type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+            });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_promark_import.xlsx';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📗 Promark Excel exported with two-line cells in column A!');
+        }
+
+        function copyAll() {
+            const lines = [];
+            for (const d of resultData) {
+                lines.push(d.label1);
+                lines.push(d.label2);
+            }
+            navigator.clipboard.writeText(lines.join('\n')).then(() => {
+                showToast('📋 Labels copied to clipboard!');
+            });
+        }
+
+        function copyPlainText() {
+            updatePlainText();
+            navigator.clipboard.writeText(document.getElementById('plainText').value).then(() => {
+                showToast('📄 Text copied to clipboard!');
+            });
+        }
+
+        function downloadResult() {
+            updatePlainText();
+            const text = document.getElementById('plainText').value;
+            const blob = new Blob([text], { type: 'text/plain;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = getExportBaseName() + '_result.txt';
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('💾 File saved!');
+        }
+
+        function clearAll() {
+            document.getElementById('eplanInput').value = '';
+            document.getElementById('resultArea').style.display = 'none';
+            document.getElementById('fileInput').value = '';
+            resultData = [];
+            clearImportWarning();
+            countInputRows();
+            showToast('🗑️ Everything cleared!');
+        }
+
+        function loadExample() {
+            document.getElementById('eplanInput').value =
+                '=P9203+102-W30.106\t=P9203+UH100-K153-P6\t=P9203+102-W30.106\t=P9203+102-TA1-X2x6\n' +
+                '=P9203+100-W30.105\t=P9203+UH100-K153-P5\t=P9203+100-W30.105\t=P9203+100-PH01-X1P1';
+            clearImportWarning();
+            countInputRows();
+            showToast('💡 Example data loaded!');
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 2500);
+        }
+
+        countInputRows();
+    </script>
+</body>
+</html>
