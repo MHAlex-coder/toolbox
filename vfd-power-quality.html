@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>VFD Power Quality &amp; Current Calculator</title>
+    <script src="https://cdn.jsdelivr.net/npm/exceljs/dist/exceljs.min.js"></script>
     <style>
         :root {
             --bg: #f5f6fa;
@@ -130,6 +131,9 @@
         .btn-primary { background: var(--primary); color: #fff; width: 100%; justify-content: center; }
         .btn-primary:hover { background: var(--primary-hover); }
         .btn-primary:active { transform: scale(0.98); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 12px; }
 
         /* Results */
         .results-card {
@@ -659,6 +663,9 @@
             </div>
         </div>
         <button class="btn btn-primary" onclick="sysCalculate()">⚡ Calculate system</button>
+        <div class="btn-row">
+            <button class="btn btn-success" onclick="exportExcel()">📊 Export to Excel</button>
+        </div>
 
         <div class="sys-results" id="sysResults">
             <div class="sys-summary">
@@ -1393,6 +1400,131 @@ function updateChokeSpec(totalI1, totalIrms, totalIrmsWithChoke, motorCount, val
 // ── Init ──
 buildDropdown();
 sysAddRow(); // start with one empty row
+
+// ===================== EXCEL EXPORT =====================
+async function exportExcel() {
+    if (typeof ExcelJS === 'undefined') { alert('ExcelJS library not loaded'); return; }
+
+    const wb = new ExcelJS.Workbook();
+
+    // ── Single drive sheet ──
+    const card = document.getElementById('resultsCard');
+    if (card.classList.contains('visible')) {
+        const ws = wb.addWorksheet('Single Drive');
+        ws.columns = [
+            { key: 'param', width: 32 },
+            { key: 'value', width: 18 },
+        ];
+        const hRow = ws.addRow(['Parameter', 'Value']);
+        hRow.font = { bold: true };
+        hRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } }; });
+
+        const driveName = selectedDrive && !selectedDrive.custom
+            ? `${selectedDrive.manufacturer} ${selectedDrive.model}` : 'Custom';
+        ws.addRow(['Drive', driveName]);
+        ws.addRow(['Load level', loadSlider.value + '%']);
+        ws.addRow(['cos φ', document.getElementById('resCos').textContent]);
+        ws.addRow(['THDi (%)', document.getElementById('resTHDi').textContent]);
+        ws.addRow(['Power Factor λ', document.getElementById('resLambda').textContent]);
+        ws.addRow(['Fundamental I₁ (A)', document.getElementById('resI1').textContent]);
+        ws.addRow(['Line Current IRMS (A)', document.getElementById('resIrms').textContent]);
+        ws.addRow(['Harmonic Current Ih (A)', document.getElementById('resWaste').textContent]);
+
+        ws.eachRow(row => {
+            const cell = row.getCell(2);
+            const num = parseFloat(cell.value);
+            if (!isNaN(num) && row.number > 1) {
+                cell.value = num;
+                cell.numFmt = '#,##0.000';
+                cell.alignment = { horizontal: 'right' };
+            }
+        });
+    }
+
+    // ── System sheet ──
+    const sysPanel = document.getElementById('sysResults');
+    if (sysPanel.classList.contains('visible')) {
+        const ws = wb.addWorksheet('System View');
+        ws.columns = [
+            { key: 'qty', width: 8 },
+            { key: 'drive', width: 36 },
+            { key: 'i1', width: 14 },
+            { key: 'load', width: 10 },
+            { key: 'irms', width: 14 },
+        ];
+        const hRow = ws.addRow(['Qty', 'Drive', 'I₁ (A)', 'Load %', 'IRMS (A)']);
+        hRow.font = { bold: true };
+        hRow.eachCell(c => { c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE2E8F0' } }; });
+
+        const rows = document.querySelectorAll('#sysBody tr');
+        rows.forEach(tr => {
+            const r = sysCalcRow(tr);
+            if (!r) return;
+            const driveIdx = tr.querySelector('.sr-drive').value;
+            const d = DRIVES[parseInt(driveIdx)];
+            const dName = d ? `${d.manufacturer} ${d.model}` : '';
+            ws.addRow([r.qty, dName, parseFloat(r.I1.toFixed(2)), r.loadPct, parseFloat(r.Irms.toFixed(2))]);
+        });
+
+        // Summary rows
+        ws.addRow([]);
+        const totalIrms = parseFloat(document.getElementById('ssTotalIrmsVal').textContent);
+        const totalI1 = parseFloat(document.getElementById('ssTotalI1Val').textContent);
+        const totalIh = parseFloat(document.getElementById('ssTotalIhVal').textContent);
+        const lambdaSys = document.getElementById('ssLambdaVal').textContent;
+        const motorCount = document.getElementById('ssMotorCountVal').textContent;
+
+        const sLabel = ws.addRow(['', 'SYSTEM SUMMARY', '', '', '']);
+        sLabel.font = { bold: true, size: 11 };
+        sLabel.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+
+        ws.addRow(['', 'Total I₁ (A)', totalI1, '', '']);
+        ws.addRow(['', 'Total IRMS (A)', totalIrms, '', '']);
+        ws.addRow(['', 'Total Ih (A)', totalIh, '', '']);
+        ws.addRow(['', 'Motor count', parseInt(motorCount), '', '']);
+        ws.addRow(['', 'System λ', parseFloat(lambdaSys), '', '']);
+
+        const fuseVal = document.getElementById('sysFuse').value;
+        ws.addRow(['', 'Fuse (A)', parseInt(fuseVal), '', '']);
+
+        // Choke data if visible
+        const chokeSpec = document.getElementById('chokeSpec');
+        if (chokeSpec.classList.contains('visible')) {
+            ws.addRow([]);
+            const cLabel = ws.addRow(['', 'CHOKE RECOMMENDATION', '', '', '']);
+            cLabel.font = { bold: true, size: 11 };
+            cLabel.getCell(2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+            ws.addRow(['', 'Rated current (A)', document.getElementById('csRatedI').textContent, '', '']);
+            ws.addRow(['', 'Inductance 3% uk (mH)', document.getElementById('csL3').textContent, '', '']);
+            ws.addRow(['', 'Inductance 4% uk (mH)', document.getElementById('csL4').textContent, '', '']);
+            ws.addRow(['', 'IRMS without choke (A)', document.getElementById('cdIrms').textContent.replace(' A', ''), '', '']);
+            ws.addRow(['', 'IRMS with choke (A)', document.getElementById('cdIrmsChoke').textContent.replace(' A', ''), '', '']);
+            ws.addRow(['', 'Reduction', document.getElementById('cdReduction').textContent, '', '']);
+        }
+
+        // Number formatting
+        ws.eachRow(row => {
+            [3, 5].forEach(col => {
+                const cell = row.getCell(col);
+                if (typeof cell.value === 'number') {
+                    cell.numFmt = '#,##0.00';
+                    cell.alignment = { horizontal: 'right' };
+                }
+            });
+        });
+    }
+
+    if (wb.worksheets.length === 0) { alert('Nothing to export. Run a calculation first.'); return; }
+
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'vfd_power_quality.xlsx';
+    a.click();
+    URL.revokeObjectURL(url);
+}
 
 // Keyboard shortcut: Enter to calculate
 document.addEventListener('keydown', e => {
