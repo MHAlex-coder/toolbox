@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Formulas &amp; Quantities — Electrical Design &amp; Automation</title>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: rgba(37,99,235,.08);
+            --danger: #dc2626;
+            --success: #16a34a;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.5; padding: 20px;
+        }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
+        .subtitle { text-align: center; color: var(--text-light); margin-bottom: 24px; font-size: 0.9rem; }
+        .container { max-width: 1100px; margin: 0 auto; }
+        .back-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            color: var(--primary); text-decoration: none; font-size: 0.9rem;
+            font-weight: 600; margin-bottom: 16px;
+            transition: opacity .2s;
+        }
+        .back-link:hover { opacity: .7; }
+
+        .card {
+            background: var(--card); border-radius: 10px;
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+
+        /* Table of contents */
+        .toc {
+            display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 24px;
+        }
+        .toc a {
+            display: inline-block; padding: 6px 16px;
+            background: #f1f5f9; border-radius: 6px;
+            color: var(--primary); text-decoration: none;
+            font-size: 0.85rem; font-weight: 600;
+            transition: background .2s, color .2s;
+        }
+        .toc a:hover {
+            background: var(--primary); color: #fff;
+        }
+
+        /* Formula blocks */
+        .formula-group { margin-bottom: 20px; }
+        .formula-group h3 {
+            font-size: 0.95rem; font-weight: 700;
+            color: var(--text); margin-bottom: 10px;
+            padding-left: 2px;
+        }
+        .formula-row {
+            display: grid;
+            grid-template-columns: minmax(180px, auto) 1fr;
+            gap: 12px;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-bottom: 4px;
+            align-items: baseline;
+        }
+        .formula-row:nth-child(even) { background: #f8fafc; }
+        .formula-row:nth-child(odd)  { background: var(--primary-light); }
+        .formula-expr {
+            font-family: 'Cambria Math', 'Times New Roman', serif;
+            font-size: 1.08rem; font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
+        }
+        .formula-desc {
+            font-size: 0.88rem;
+            color: var(--text-light);
+        }
+
+        /* Reference tables */
+        .ref-table { width: 100%; border-collapse: collapse; margin-bottom: 4px; }
+        .ref-table th {
+            padding: 10px 14px; text-align: left; font-size: 0.8rem;
+            font-weight: 700; color: var(--text-light); text-transform: uppercase;
+            letter-spacing: 0.5px; border-bottom: 2px solid var(--border);
+            background: #f8fafc;
+        }
+        .ref-table td {
+            padding: 8px 14px; border-bottom: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+        .ref-table tr:hover td { background: var(--primary-light); }
+        .ref-table .symbol {
+            font-family: 'Cambria Math', 'Times New Roman', serif;
+            font-size: 1.05rem; font-weight: 600; color: var(--primary);
+            white-space: nowrap;
+        }
+        .ref-table .unit {
+            font-weight: 600; white-space: nowrap;
+        }
+
+        /* Constant table highlight */
+        .const-val {
+            font-weight: 700; color: var(--text); font-family: 'Consolas', monospace;
+        }
+
+        /* Responsive */
+        @media (max-width: 680px) {
+            .formula-row { grid-template-columns: 1fr; gap: 2px; }
+            .ref-table th, .ref-table td { padding: 6px 8px; font-size: 0.82rem; }
+        }
+
+        /* Print */
+        @media print {
+            body { background: #fff; padding: 10px; }
+            .back-link, .toc { display: none !important; }
+            .card { box-shadow: none; break-inside: avoid; border: 1px solid #ddd; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+
+    <a href="index.html" class="back-link">← Back to home</a>
+
+    <h1>📐 Formulas &amp; Quantities</h1>
+    <p class="subtitle">Reference sheet for electrical design engineers in automation — formulas, quantities, units and constants</p>
+
+    <!-- TOC -->
+    <div class="toc">
+        <a href="#sec-ac">AC Power Calculation</a>
+        <a href="#sec-dc">24 V DC</a>
+        <a href="#sec-vfd">VFD &amp; Harmonics</a>
+        <a href="#sec-forlust">Power Loss &amp; Cooling</a>
+        <a href="#sec-storheter">Quantities</a>
+        <a href="#sec-enheter">Units</a>
+        <a href="#sec-konstanter">Constants</a>
+        <a href="#sec-forkortningar">Abbreviations</a>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- AC EFFEKTBERÄKNING                          -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card" id="sec-ac">
+        <h2><span class="icon">⚡</span> AC Power Calculation (400 V / 230 V)</h2>
+
+        <div class="formula-group">
+            <h3>Active &amp; Apparent Power</h3>
+            <div class="formula-row">
+                <span class="formula-expr">P = n × P<sub>nom</sub> × load / η</span>
+                <span class="formula-desc">Active power with simultaneity factor, load in % and efficiency η</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">S = P / cos φ</span>
+                <span class="formula-desc">Apparent power (without VFD)</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">S = P / 0.90</span>
+                <span class="formula-desc">Apparent power (with VFD, assumed total power factor ≈ 0.90)</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Current Calculation</h3>
+            <div class="formula-row">
+                <span class="formula-expr">I = S × 1000 / (U × √3)</span>
+                <span class="formula-desc">Phase current, 3-phase (S in kVA, U in V)</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">I = S × 1000 / U</span>
+                <span class="formula-desc">Current, single-phase (S in kVA, U in V)</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Fuse Sizing</h3>
+            <div class="formula-row">
+                <span class="formula-expr">I<sub>fuse</sub> = I<sub>peak</sub> × (1 + margin%)</span>
+                <span class="formula-desc">Peak current with safety margin, rounded up to standard fuse rating</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">PF<sub>total</sub> = P<sub>total</sub> / S<sub>total</sub></span>
+                <span class="formula-desc">Total power factor for the entire installation</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- 24V DC                                      -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card" id="sec-dc">
+        <h2><span class="icon">🔋</span> 24 V DC — Direct Current Calculations</h2>
+
+        <div class="formula-group">
+            <h3>Power &amp; Current</h3>
+            <div class="formula-row">
+                <span class="formula-expr">P = U × I</span>
+                <span class="formula-desc">Power, direct current (Ohm's law)</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">I<sub>total</sub> = Σ (qty × I<sub>unit</sub>)</span>
+                <span class="formula-desc">Total load current summed from all consumers</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Cable Voltage Drop</h3>
+            <div class="formula-row">
+                <span class="formula-expr">R<sub>cable</sub> = ρ × L / A</span>
+                <span class="formula-desc">Cable resistance (ρ = resistivity, L = length, A = cross-section area)</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">ΔU = 2 × I × R<sub>cable</sub></span>
+                <span class="formula-desc">Voltage drop forward + return in cable</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">ΔU% = (ΔU / U<sub>supply</sub>) × 100</span>
+                <span class="formula-desc">Voltage drop as percentage of supply voltage</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">U<sub>load</sub> = U<sub>supply</sub> − ΔU</span>
+                <span class="formula-desc">Voltage at load after voltage drop</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Fuse Selection (DC)</h3>
+            <div class="formula-row">
+                <span class="formula-expr">I<sub>fuse</sub> = I<sub>total</sub> × (1 + margin%)</span>
+                <span class="formula-desc">Selected fuse with safety margin (typically 20%)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- VFD & ÖVERTONER                             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card" id="sec-vfd">
+        <h2><span class="icon">🔄</span> VFD — Harmonics &amp; Power Factor</h2>
+
+        <div class="formula-group">
+            <h3>Total Power Factor</h3>
+            <div class="formula-row">
+                <span class="formula-expr">λ = cos φ × 1 / √(1 + THD<sub>i</sub>²)</span>
+                <span class="formula-desc">Total power factor = displacement × distortion factor</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">VFD approx: 0.97 × 1/√(1 + 0.40²) ≈ 0.90</span>
+                <span class="formula-desc">Typical cos φ ≈ 0.97 and THDi ≈ 40% gives λ ≈ 0.90</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Current incl. Harmonics</h3>
+            <div class="formula-row">
+                <span class="formula-expr">I<sub>RMS</sub> = I₁ × √(1 + THD<sub>i</sub>²)</span>
+                <span class="formula-desc">True RMS current including harmonic distortion</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">I<sub>h</sub> = √(I<sub>RMS</sub>² − I₁²)</span>
+                <span class="formula-desc">Total harmonic current</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">I₁ = P / (√3 × U × cos φ × η)</span>
+                <span class="formula-desc">Theoretical fundamental current, 3-phase motor</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Line Reactor Inductance</h3>
+            <div class="formula-row">
+                <span class="formula-expr">L = (u<sub>k</sub> × U<sub>phase</sub>) / (2π × f × I) × 1000</span>
+                <span class="formula-desc">Line reactor inductance in mH (u<sub>k</sub> = 3–4%)</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- FÖRLUSTEFFEKT & KYLNING                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card" id="sec-forlust">
+        <h2><span class="icon">🌡️</span> Power Loss &amp; Enclosure Cooling</h2>
+
+        <div class="formula-group">
+            <h3>Loss Calculation</h3>
+            <div class="formula-row">
+                <span class="formula-expr">P<sub>total</sub> = Σ (qty × P<sub>loss/unit</sub>)</span>
+                <span class="formula-desc">Total power loss inside the enclosure</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">P<sub>design</sub> = P<sub>total</sub> × derating%</span>
+                <span class="formula-desc">Design power loss with derating factor (typically 80%)</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Thermal Sizing</h3>
+            <div class="formula-row">
+                <span class="formula-expr">ΔT = T<sub>max</sub> − T<sub>ambient</sub></span>
+                <span class="formula-desc">Temperature difference between enclosure and ambient</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">A = 2(d×h) + 2(w×h) + w×d</span>
+                <span class="formula-desc">Effective cooling surface (sides + back + top, excl. bottom)</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">P<sub>natural</sub> = k × A × ΔT</span>
+                <span class="formula-desc">Dissipated power via natural convection (k ≈ 5.5 W/(m²·K))</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">A<sub>required</sub> = P / (k × ΔT)</span>
+                <span class="formula-desc">Required cooling surface with natural convection only</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- STORHETER                                   -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card" id="sec-storheter">
+        <h2><span class="icon">🔤</span> Quantities — Symbols &amp; Description</h2>
+        <table class="ref-table">
+            <thead>
+                <tr>
+                    <th style="width:80px">Symbol</th>
+                    <th>Quantity</th>
+                    <th>Unit</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="symbol">P</td><td>Active power</td><td class="unit">W, kW</td><td>The power that performs work in the circuit</td></tr>
+                <tr><td class="symbol">S</td><td>Apparent power</td><td class="unit">VA, kVA</td><td>Product of voltage and current regardless of phase angle</td></tr>
+                <tr><td class="symbol">Q</td><td>Reactive power</td><td class="unit">var, kvar</td><td>Power oscillating between source and load (does no work)</td></tr>
+                <tr><td class="symbol">U</td><td>Voltage</td><td class="unit">V</td><td>Electrical potential difference</td></tr>
+                <tr><td class="symbol">I</td><td>Current</td><td class="unit">A</td><td>Flow of electric charge per unit time</td></tr>
+                <tr><td class="symbol">I₁</td><td>Fundamental current</td><td class="unit">A</td><td>Fundamental component of the current (50 Hz)</td></tr>
+                <tr><td class="symbol">I<sub>RMS</sub></td><td>RMS current</td><td class="unit">A</td><td>True RMS current including all harmonics</td></tr>
+                <tr><td class="symbol">I<sub>h</sub></td><td>Harmonic current</td><td class="unit">A</td><td>Total harmonic current component</td></tr>
+                <tr><td class="symbol">R</td><td>Resistance</td><td class="unit">Ω</td><td>Opposition to current flow</td></tr>
+                <tr><td class="symbol">L</td><td>Inductance</td><td class="unit">H, mH</td><td>Ability to store energy in a magnetic field</td></tr>
+                <tr><td class="symbol">C</td><td>Capacitance</td><td class="unit">F, µF</td><td>Ability to store energy in an electric field</td></tr>
+                <tr><td class="symbol">Z</td><td>Impedance</td><td class="unit">Ω</td><td>Total AC opposition to current flow (R + jX)</td></tr>
+                <tr><td class="symbol">f</td><td>Frequency</td><td class="unit">Hz</td><td>Number of oscillations per second</td></tr>
+                <tr><td class="symbol">cos φ</td><td>Power factor (displacement)</td><td class="unit">—</td><td>Phase shift between current and voltage (fundamental)</td></tr>
+                <tr><td class="symbol">λ</td><td>Total power factor</td><td class="unit">—</td><td>Includes displacement + distortion (cos φ × distortion factor)</td></tr>
+                <tr><td class="symbol">THD<sub>i</sub></td><td>Harmonic distortion</td><td class="unit">%</td><td>Total harmonic distortion of the current</td></tr>
+                <tr><td class="symbol">η</td><td>Efficiency</td><td class="unit">%</td><td>Ratio of useful output power to total input power</td></tr>
+                <tr><td class="symbol">ρ</td><td>Resistivity</td><td class="unit">Ω·mm²/m</td><td>Material-specific resistance (copper ≈ 0.0175)</td></tr>
+                <tr><td class="symbol">ΔT</td><td>Temperature difference</td><td class="unit">K, °C</td><td>Difference between internal and external temperature</td></tr>
+                <tr><td class="symbol">A</td><td>Area / Cable area</td><td class="unit">m², mm²</td><td>Surface (cooling) or conductor cross-section (cable)</td></tr>
+                <tr><td class="symbol">u<sub>k</sub></td><td>Short-circuit impedance</td><td class="unit">%</td><td>Reactor's relative impedance at rated current</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- ENHETER                                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card" id="sec-enheter">
+        <h2><span class="icon">📏</span> Units — SI &amp; Others</h2>
+        <table class="ref-table">
+            <thead>
+                <tr>
+                    <th style="width:100px">Unit</th>
+                    <th>Name</th>
+                    <th>Measures</th>
+                    <th>Note</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="unit">V</td><td>Volt</td><td>Voltage</td><td>SI unit</td></tr>
+                <tr><td class="unit">A</td><td>Ampere</td><td>Current</td><td>SI unit</td></tr>
+                <tr><td class="unit">W</td><td>Watt</td><td>Active power</td><td>1 W = 1 V × 1 A</td></tr>
+                <tr><td class="unit">kW</td><td>Kilowatt</td><td>Active power</td><td>1 kW = 1,000 W</td></tr>
+                <tr><td class="unit">VA</td><td>Volt-ampere</td><td>Apparent power</td><td>S = U × I</td></tr>
+                <tr><td class="unit">kVA</td><td>Kilovolt-ampere</td><td>Apparent power</td><td>1 kVA = 1,000 VA</td></tr>
+                <tr><td class="unit">var</td><td>Volt-ampere reactive</td><td>Reactive power</td><td>Q = S × sin φ</td></tr>
+                <tr><td class="unit">Ω</td><td>Ohm</td><td>Resistance / Impedance</td><td>R = U / I</td></tr>
+                <tr><td class="unit">H / mH</td><td>Henry / Millihenry</td><td>Inductance</td><td>1 mH = 0.001 H</td></tr>
+                <tr><td class="unit">F / µF</td><td>Farad / Microfarad</td><td>Capacitance</td><td>1 µF = 10⁻⁶ F</td></tr>
+                <tr><td class="unit">Hz</td><td>Hertz</td><td>Frequency</td><td>Mains frequency = 50 Hz (Europe)</td></tr>
+                <tr><td class="unit">°C / K</td><td>Celsius / Kelvin</td><td>Temperature</td><td>ΔT: 1 °C = 1 K</td></tr>
+                <tr><td class="unit">mm²</td><td>Square millimeter</td><td>Cable area</td><td>Conductor cross-section</td></tr>
+                <tr><td class="unit">m</td><td>Meter</td><td>Length</td><td>Cable length</td></tr>
+                <tr><td class="unit">m²</td><td>Square meter</td><td>Surface area</td><td>Enclosure cooling surface</td></tr>
+                <tr><td class="unit">W/(m²·K)</td><td>—</td><td>Convection coefficient</td><td>Heat dissipation per area and degree difference</td></tr>
+                <tr><td class="unit">Ω·mm²/m</td><td>—</td><td>Resistivity</td><td>Copper: ρ ≈ 0.0175</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- KONSTANTER                                  -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card" id="sec-konstanter">
+        <h2><span class="icon">📌</span> Constants &amp; Default Values</h2>
+        <table class="ref-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th style="width:160px">Value</th>
+                    <th>Comment</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td>Copper resistivity (ρ)</td><td class="const-val">0.0175 Ω·mm²/m</td><td>At 20 °C, corr. ~0.0189 at 40 °C</td></tr>
+                <tr><td>Three-phase factor (√3)</td><td class="const-val">1.732</td><td>Phase-to-line voltage ratio</td></tr>
+                <tr><td>Mains frequency (f)</td><td class="const-val">50 Hz</td><td>European power grid</td></tr>
+                <tr><td>Phase voltage (U<sub>phase</sub>)</td><td class="const-val">230 V</td><td>Phase-to-neutral (TN system)</td></tr>
+                <tr><td>Line voltage (U<sub>line</sub>)</td><td class="const-val">400 V</td><td>Phase-to-phase (3-phase)</td></tr>
+                <tr><td>Convection coefficient (k)</td><td class="const-val">5.5 W/(m²·K)</td><td>Painted steel, natural convection</td></tr>
+                <tr><td>VFD assumed PF (λ)</td><td class="const-val">0.90</td><td>cos φ ≈ 0.97 × distortion at THDi ≈ 40%</td></tr>
+                <tr><td>Derating factor (enclosure)</td><td class="const-val">80%</td><td>Typical design value</td></tr>
+                <tr><td>Safety margin (AC)</td><td class="const-val">15%</td><td>Addition for fuse sizing</td></tr>
+                <tr><td>Safety margin (24 V DC)</td><td class="const-val">20%</td><td>Addition for fuse sizing</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- STANDARDSÄKRINGAR                           -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card">
+        <h2><span class="icon">🔧</span> Standard Fuse Ratings</h2>
+        <div class="formula-group">
+            <h3>AC (400 V / 230 V)</h3>
+            <div class="formula-row">
+                <span class="formula-expr">Standard series</span>
+                <span class="formula-desc">10 — 16 — 20 — 25 — 32 — 35 — 40 — 50 — 63 — 80 — 100 — 125 — 160 — 200 — 250 — 315 — 400 — 500 — 630 A</span>
+            </div>
+        </div>
+        <div class="formula-group">
+            <h3>DC (24 V)</h3>
+            <div class="formula-row">
+                <span class="formula-expr">Standard series</span>
+                <span class="formula-desc">0.5 — 1 — 2 — 3 — 4 — 5 — 6 — 8 — 10 — 13 — 16 — 20 — 25 — 32 A</span>
+            </div>
+        </div>
+        <div class="formula-group">
+            <h3>Common cable sizes 24 V DC</h3>
+            <div class="formula-row">
+                <span class="formula-expr">Standard sizes</span>
+                <span class="formula-desc">0.25 — 0.34 — 0.5 — 0.75 — 1.0 — 1.5 — 2.5 — 4.0 — 6.0 mm²</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- FÖRKORTNINGAR                               -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card" id="sec-forkortningar">
+        <h2><span class="icon">🗂️</span> Common Abbreviations</h2>
+        <table class="ref-table">
+            <thead>
+                <tr>
+                    <th style="width:120px">Abbreviation</th>
+                    <th>Stands for</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="unit">VFD</td><td>Variable Frequency Drive</td><td>Frequency converter for motor control</td></tr>
+                <tr><td class="unit">PF</td><td>Power Factor</td><td>Power factor (cos φ or λ)</td></tr>
+                <tr><td class="unit">THD</td><td>Total Harmonic Distortion</td><td>Total harmonic distortion (harmonics)</td></tr>
+                <tr><td class="unit">THDi</td><td>THD (current)</td><td>Harmonic distortion of the current</td></tr>
+                <tr><td class="unit">RMS</td><td>Root Mean Square</td><td>Effective value (true mean square)</td></tr>
+                <tr><td class="unit">AC</td><td>Alternating Current</td><td>Alternating current</td></tr>
+                <tr><td class="unit">DC</td><td>Direct Current</td><td>Direct current</td></tr>
+                <tr><td class="unit">PE</td><td>Protective Earth</td><td>Protective earth conductor</td></tr>
+                <tr><td class="unit">N</td><td>Neutral</td><td>Neutral conductor</td></tr>
+                <tr><td class="unit">L1, L2, L3</td><td>Line 1, 2, 3</td><td>Phase conductors in 3-phase systems</td></tr>
+                <tr><td class="unit">TN, TT, IT</td><td>Earthing systems</td><td>Network configurations per IEC 60364</td></tr>
+                <tr><td class="unit">IP</td><td>Ingress Protection</td><td>Enclosure protection rating (e.g. IP65)</td></tr>
+                <tr><td class="unit">MCB</td><td>Miniature Circuit Breaker</td><td>Miniature circuit breaker</td></tr>
+                <tr><td class="unit">MCCB</td><td>Molded Case Circuit Breaker</td><td>Molded case breaker for higher currents</td></tr>
+                <tr><td class="unit">PLC</td><td>Programmable Logic Controller</td><td>Programmable control system</td></tr>
+                <tr><td class="unit">HMI</td><td>Human Machine Interface</td><td>Operator panel / user interface</td></tr>
+                <tr><td class="unit">IO-Link</td><td>IO-Link (IEC 61131-9)</td><td>Point-to-point communication for sensors/actuators</td></tr>
+                <tr><td class="unit">SCADA</td><td>Supervisory Control And Data Acquisition</td><td>Supervisory control and monitoring system</td></tr>
+                <tr><td class="unit">DI / DO</td><td>Digital Input / Digital Output</td><td>Digital inputs and outputs</td></tr>
+                <tr><td class="unit">AI / AO</td><td>Analog Input / Analog Output</td><td>Analog inputs and outputs (4–20 mA, 0–10 V)</td></tr>
+                <tr><td class="unit">EMC</td><td>Electromagnetic Compatibility</td><td>Electromagnetic compatibility</td></tr>
+                <tr><td class="unit">UPS</td><td>Uninterruptible Power Supply</td><td>Uninterruptible power supply</td></tr>
+                <tr><td class="unit">NTC / PTC</td><td>Negative / Positive Temp. Coefficient</td><td>Temperature sensor (thermistor)</td></tr>
+                <tr><td class="unit">RTD</td><td>Resistance Temperature Detector</td><td>Resistance temperature detector (Pt100, Pt1000)</td></tr>
+                <tr><td class="unit">CT</td><td>Current Transformer</td><td>Current transformer</td></tr>
+                <tr><td class="unit">PSU</td><td>Power Supply Unit</td><td>Power supply unit</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- OHMS LAG & GRUNDFORMLER                     -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card">
+        <h2><span class="icon">📘</span> Fundamentals — Ohm's Law &amp; Power Triangle</h2>
+
+        <div class="formula-group">
+            <h3>Ohm's Law</h3>
+            <div class="formula-row">
+                <span class="formula-expr">U = R × I</span>
+                <span class="formula-desc">Voltage = Resistance × Current</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">I = U / R</span>
+                <span class="formula-desc">Current = Voltage / Resistance</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">R = U / I</span>
+                <span class="formula-desc">Resistance = Voltage / Current</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Power Triangle (DC &amp; pure AC)</h3>
+            <div class="formula-row">
+                <span class="formula-expr">P = U × I</span>
+                <span class="formula-desc">Power = Voltage × Current</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">P = I² × R</span>
+                <span class="formula-desc">Power = Current² × Resistance</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">P = U² / R</span>
+                <span class="formula-desc">Power = Voltage² / Resistance</span>
+            </div>
+        </div>
+
+        <div class="formula-group">
+            <h3>Power Triangle (AC 3-phase)</h3>
+            <div class="formula-row">
+                <span class="formula-expr">P = √3 × U × I × cos φ</span>
+                <span class="formula-desc">Active power, 3-phase</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">S = √3 × U × I</span>
+                <span class="formula-desc">Apparent power, 3-phase</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">Q = √3 × U × I × sin φ</span>
+                <span class="formula-desc">Reactive power, 3-phase</span>
+            </div>
+            <div class="formula-row">
+                <span class="formula-expr">S² = P² + Q²</span>
+                <span class="formula-desc">Relationship between S, P and Q</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════ -->
+    <!-- DELLASTFAKTORER                             -->
+    <!-- ═══════════════════════════════════════════ -->
+    <div class="card">
+        <h2><span class="icon">📊</span> Partial Load Factors — VFD Motors</h2>
+        <table class="ref-table">
+            <thead>
+                <tr>
+                    <th>Motor Load</th>
+                    <th>THDi Factor</th>
+                    <th>cos φ Factor</th>
+                    <th>Current Factor</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr><td class="unit">100 %</td><td>× 1,0</td><td>× 1,00</td><td>1,00</td></tr>
+                <tr><td class="unit">75 %</td><td>× 1,1</td><td>× 0,95</td><td>0,90</td></tr>
+                <tr><td class="unit">50 %</td><td>× 1,3</td><td>× 0,85</td><td>0,75</td></tr>
+                <tr><td class="unit">25 %</td><td>× 1,5</td><td>× 0,70</td><td>0,55</td></tr>
+                <tr><td class="unit">0 %</td><td>—</td><td>—</td><td>0,40</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+</div>
+
+</body>
+</html>

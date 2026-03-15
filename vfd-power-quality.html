@@ -1,0 +1,1416 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VFD Power Quality &amp; Current Calculator</title>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: rgba(37,99,235,.08);
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --success: #16a34a;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+            --warn-bg: #fff7ed;
+            --warn-border: #f59e0b;
+            --warn-text: #9a3412;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.5; padding: 20px;
+        }
+        h1 { text-align: center; font-size: 1.8rem; margin-bottom: 8px; color: var(--primary); }
+        .subtitle { text-align: center; color: var(--text-light); margin-bottom: 24px; font-size: 0.9rem; }
+        .container { max-width: 800px; margin: 0 auto; }
+
+        .card {
+            background: var(--card); border-radius: 10px;
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem; margin-bottom: 16px; padding-bottom: 8px;
+            border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+
+        /* Form */
+        .form-group { margin-bottom: 16px; }
+        .form-group label {
+            display: block; font-size: 0.85rem; font-weight: 600;
+            color: var(--text-light); margin-bottom: 6px;
+        }
+        .form-group input, .form-group select {
+            width: 100%; padding: 10px 14px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-size: 0.95rem; transition: border-color .2s;
+            background: #fff; color: var(--text);
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+        .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+        /* Custom searchable dropdown */
+        .dropdown-wrapper { position: relative; }
+        .dropdown-selected {
+            width: 100%; padding: 10px 14px; padding-right: 36px;
+            border: 1px solid var(--border); border-radius: 6px;
+            font-size: 0.95rem; background: #fff; cursor: pointer;
+            transition: border-color .2s; display: flex; align-items: center;
+            min-height: 42px; user-select: none;
+        }
+        .dropdown-selected:focus, .dropdown-wrapper.open .dropdown-selected {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+        .dropdown-selected::after {
+            content: '▾'; position: absolute; right: 12px; top: 50%;
+            transform: translateY(-50%); color: var(--text-light); font-size: 0.9rem;
+            pointer-events: none;
+        }
+        .dropdown-panel {
+            display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+            background: #fff; border: 1px solid var(--border); border-radius: 8px;
+            box-shadow: 0 10px 25px rgba(0,0,0,.12); z-index: 100;
+            max-height: 340px; overflow: hidden;
+            flex-direction: column;
+        }
+        .dropdown-wrapper.open .dropdown-panel { display: flex; }
+        .dropdown-search {
+            padding: 10px 14px; border: none; border-bottom: 1px solid var(--border);
+            font-size: 0.9rem; outline: none; width: 100%;
+        }
+        .dropdown-list {
+            overflow-y: auto; max-height: 280px;
+        }
+        .dropdown-group-label {
+            padding: 8px 14px 4px; font-size: 0.75rem; font-weight: 700;
+            color: var(--text-light); text-transform: uppercase; letter-spacing: 0.5px;
+            background: #f8fafc; position: sticky; top: 0;
+        }
+        .dropdown-item {
+            padding: 10px 14px; cursor: pointer; font-size: 0.9rem;
+            transition: background .1s; display: flex; justify-content: space-between;
+            align-items: center;
+        }
+        .dropdown-item:hover, .dropdown-item.highlighted { background: var(--primary-light); }
+        .dropdown-item.selected { background: var(--primary); color: #fff; }
+        .dropdown-item .item-meta {
+            font-size: 0.78rem; color: var(--text-light); white-space: nowrap;
+        }
+        .dropdown-item.selected .item-meta { color: rgba(255,255,255,.75); }
+        .dropdown-item.hidden { display: none; }
+
+        /* Custom input fields */
+        .custom-fields {
+            display: none; margin-top: 12px;
+            padding: 16px; background: #f8fafc; border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .custom-fields.visible { display: block; }
+        .custom-fields .form-row { margin-bottom: 0; }
+
+        /* Calculate button */
+        .btn {
+            padding: 12px 28px; border: none; border-radius: 6px;
+            font-size: 0.95rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-primary { background: var(--primary); color: #fff; width: 100%; justify-content: center; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-primary:active { transform: scale(0.98); }
+
+        /* Results */
+        .results-card {
+            display: none;
+        }
+        .results-card.visible { display: block; }
+
+        .gauge-container {
+            display: flex; flex-direction: column; align-items: center;
+            margin-bottom: 24px;
+        }
+        .gauge-svg { width: 220px; height: 130px; }
+        .gauge-label {
+            font-size: 0.8rem; color: var(--text-light); font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px; margin-top: 4px;
+        }
+        .gauge-value {
+            font-size: 2rem; font-weight: 700; color: var(--primary); margin-top: -4px;
+        }
+
+        .result-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 16px; margin-bottom: 20px;
+        }
+        .result-item {
+            text-align: center; padding: 16px 12px;
+            background: #f8fafc; border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .result-item .r-label {
+            font-size: 0.75rem; color: var(--text-light); font-weight: 600;
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px;
+        }
+        .result-item .r-value {
+            font-size: 1.5rem; font-weight: 700; color: var(--primary);
+        }
+        .result-item .r-unit {
+            font-size: 0.8rem; color: var(--text-light);
+        }
+        .result-item.warn .r-value { color: var(--warn-text); }
+        .result-item.good .r-value { color: var(--success); }
+
+        /* Current comparison bar */
+        .current-compare { margin-bottom: 20px; }
+        .current-compare h3 {
+            font-size: 0.85rem; font-weight: 600; color: var(--text-light);
+            text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px;
+        }
+        .bar-group { margin-bottom: 10px; }
+        .bar-label {
+            display: flex; justify-content: space-between;
+            font-size: 0.85rem; font-weight: 600; margin-bottom: 4px;
+        }
+        .bar-track {
+            height: 28px; background: #f1f5f9; border-radius: 6px; overflow: hidden;
+            position: relative;
+        }
+        .bar-fill {
+            height: 100%; border-radius: 6px; transition: width 0.6s ease-out;
+            display: flex; align-items: center; justify-content: flex-end; padding-right: 8px;
+            font-size: 0.75rem; font-weight: 700; color: #fff; min-width: 40px;
+        }
+        .bar-fill.fundamental { background: linear-gradient(90deg, #3b82f6, #2563eb); }
+        .bar-fill.rms { background: linear-gradient(90deg, #f59e0b, #d97706); }
+        .bar-fill.harmonic { background: linear-gradient(90deg, #ef4444, #dc2626); }
+
+        /* Recommendation */
+        .recommendation {
+            display: none; padding: 14px 18px; border-radius: 8px;
+            font-size: 0.9rem; margin-bottom: 16px;
+            border-left: 4px solid;
+        }
+        .recommendation.visible { display: flex; align-items: flex-start; gap: 10px; }
+        .recommendation.warn {
+            background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text);
+        }
+        .recommendation.good {
+            background: #f0fdf4; border-color: var(--success); color: #166534;
+        }
+        .recommendation .rec-icon { font-size: 1.2rem; flex-shrink: 0; margin-top: 1px; }
+
+        /* Drive info badge */
+        .drive-info {
+            display: none; padding: 12px 16px; background: var(--primary-light);
+            border-radius: 8px; margin-bottom: 16px; font-size: 0.88rem;
+        }
+        .drive-info.visible { display: flex; align-items: center; gap: 10px; }
+        .drive-info .di-icon { font-size: 1.1rem; }
+        .drive-info .di-text { color: var(--text); }
+        .drive-info .di-text strong { color: var(--primary); }
+
+        /* Info tooltip */
+        .info-icon {
+            display: inline-flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px; border-radius: 50%;
+            background: var(--primary-light); color: var(--primary);
+            font-size: 0.7rem; font-weight: 700; cursor: help;
+            position: relative; flex-shrink: 0;
+        }
+        .info-icon .tooltip {
+            display: none; position: absolute; bottom: calc(100% + 8px); left: 50%;
+            transform: translateX(-50%); width: 280px; padding: 12px 14px;
+            background: var(--text); color: #fff; border-radius: 8px;
+            font-size: 0.8rem; font-weight: 400; line-height: 1.5;
+            box-shadow: 0 4px 12px rgba(0,0,0,.2); z-index: 200;
+            pointer-events: none;
+        }
+        .info-icon .tooltip::after {
+            content: ''; position: absolute; top: 100%; left: 50%;
+            transform: translateX(-50%);
+            border: 6px solid transparent; border-top-color: var(--text);
+        }
+        .info-icon:hover .tooltip { display: block; }
+
+        /* Load level slider */
+        .load-slider-group { margin-bottom: 16px; }
+        .load-slider-group label {
+            display: block; font-size: 0.85rem; font-weight: 600;
+            color: var(--text-light); margin-bottom: 6px;
+        }
+        .slider-row {
+            display: flex; align-items: center; gap: 14px;
+        }
+        .slider-row input[type="range"] {
+            flex: 1; -webkit-appearance: none; appearance: none;
+            height: 8px; border-radius: 4px;
+            background: linear-gradient(90deg, var(--primary) 0%, var(--primary) var(--pct, 100%), #e2e8f0 var(--pct, 100%), #e2e8f0 100%);
+            outline: none; cursor: pointer;
+        }
+        .slider-row input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none; appearance: none;
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--primary); border: 3px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,.2); cursor: pointer;
+        }
+        .slider-row input[type="range"]::-moz-range-thumb {
+            width: 22px; height: 22px; border-radius: 50%;
+            background: var(--primary); border: 3px solid #fff;
+            box-shadow: 0 1px 4px rgba(0,0,0,.2); cursor: pointer;
+        }
+        .load-badge {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-width: 52px; padding: 4px 10px; border-radius: 6px;
+            background: var(--primary); color: #fff;
+            font-size: 0.95rem; font-weight: 700; white-space: nowrap;
+        }
+        .slider-ticks {
+            display: flex; justify-content: space-between;
+            padding: 4px 2px 0; font-size: 0.75rem; color: var(--text-light); font-weight: 600;
+        }
+        .adjusted-info {
+            display: none; padding: 10px 14px; margin-bottom: 16px;
+            background: #fefce8; border: 1px solid #fde68a; border-radius: 8px;
+            font-size: 0.84rem; color: #854d0e;
+        }
+        .adjusted-info.visible { display: flex; align-items: flex-start; gap: 8px; }
+        .adjusted-info .ai-icon { flex-shrink: 0; font-size: 1rem; }
+
+        /* System table */
+        .sys-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; }
+        .sys-table th {
+            padding: 8px 6px; text-align: left; font-size: 0.75rem; font-weight: 700;
+            color: var(--text-light); text-transform: uppercase; letter-spacing: 0.4px;
+            border-bottom: 2px solid var(--border); white-space: nowrap;
+        }
+        .sys-table td { padding: 5px 4px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+        .sys-table tr:hover td { background: var(--primary-light); }
+        .sys-table input, .sys-table select {
+            width: 100%; padding: 7px 8px; border: 1px solid var(--border);
+            border-radius: 5px; font-size: 0.88rem; background: #fff; color: var(--text);
+        }
+        .sys-table input:focus, .sys-table select:focus {
+            outline: none; border-color: var(--primary); box-shadow: 0 0 0 2px rgba(37,99,235,.12);
+        }
+        .sys-table input[type="number"] { text-align: center; }
+        .sys-table .col-qty { width: 58px; }
+        .sys-table .col-drive { min-width: 160px; }
+        .sys-table .col-amp { width: 80px; }
+        .sys-table .col-load { width: 80px; }
+        .sys-table .col-irms { width: 80px; text-align: right; font-weight: 600; color: var(--primary); font-size: 0.9rem; }
+        .sys-table .col-del { width: 36px; text-align: center; }
+        .sys-row-delete {
+            background: none; border: none; color: var(--danger); cursor: pointer;
+            font-size: 1.1rem; padding: 2px 6px; border-radius: 4px; opacity: .45;
+        }
+        .sys-row-delete:hover { opacity: 1; background: #fef2f2; }
+        .sys-add-btn {
+            display: inline-flex; align-items: center; gap: 4px;
+            padding: 7px 16px; border: 1px dashed var(--border); border-radius: 6px;
+            background: transparent; color: var(--text-light); font-size: 0.85rem;
+            cursor: pointer; transition: all .2s;
+        }
+        .sys-add-btn:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-light); }
+        .sys-bottom-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 4px; margin-bottom: 16px; }
+        .sys-fuse-group { display: flex; align-items: center; gap: 8px; margin-left: auto; }
+        .sys-fuse-group label { font-size: 0.85rem; font-weight: 600; color: var(--text-light); white-space: nowrap; }
+        .sys-fuse-group select {
+            padding: 7px 10px; border: 1px solid var(--border); border-radius: 5px;
+            font-size: 0.9rem; background: #fff; color: var(--text);
+        }
+        .sys-summary {
+            background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+            border: 2px solid #bfdbfe; border-radius: 10px; padding: 20px; margin-top: 8px;
+        }
+        .sys-summary-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px,1fr));
+            gap: 14px; margin-bottom: 16px;
+        }
+        .sys-summary-item { text-align: center; }
+        .sys-summary-item .ss-label { font-size: 0.75rem; color: var(--text-light); font-weight: 600; text-transform: uppercase; letter-spacing: .4px; }
+        .sys-summary-item .ss-value { font-size: 1.5rem; font-weight: 700; color: var(--primary); }
+        .sys-summary-item .ss-unit { font-size: 0.8rem; color: var(--text-light); }
+        .sys-summary-item.warn .ss-value { color: var(--warn-text); }
+        .sys-summary-item.good .ss-value { color: var(--success); }
+        .sys-compare {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;
+        }
+        .sys-compare-box {
+            padding: 14px; border-radius: 8px; text-align: center;
+        }
+        .sys-compare-box.without { background: #fef2f2; border: 1px solid #fecaca; }
+        .sys-compare-box.with { background: #f0fdf4; border: 1px solid #bbf7d0; }
+        .sys-compare-box .sc-label { font-size: 0.78rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 4px; }
+        .sys-compare-box .sc-value { font-size: 1.4rem; font-weight: 700; }
+        .sys-compare-box.without .sc-value { color: var(--danger); }
+        .sys-compare-box.with .sc-value { color: var(--success); }
+        .sys-compare-box .sc-sub { font-size: 0.78rem; color: var(--text-light); }
+        .sys-results { display: none; }
+        .sys-results.visible { display: block; }
+        .sys-fuse-alert {
+            display: none; padding: 12px 16px; border-radius: 8px; margin-top: 12px;
+            font-size: 0.9rem; border-left: 4px solid;
+        }
+        .sys-fuse-alert.visible { display: flex; align-items: flex-start; gap: 10px; }
+        .sys-fuse-alert.danger { background: #fef2f2; border-color: var(--danger); color: #991b1b; }
+        .sys-fuse-alert.ok { background: #f0fdf4; border-color: var(--success); color: #166534; }
+        .sys-fuse-alert .sfa-icon { font-size: 1.1rem; flex-shrink: 0; }
+        .sys-drossel-rec {
+            display: none; padding: 12px 16px; border-radius: 8px; margin-bottom: 14px;
+            font-size: 0.88rem; border-left: 4px solid;
+            background: var(--warn-bg); border-color: var(--warn-border); color: var(--warn-text);
+        }
+        .sys-drossel-rec.visible { display: flex; align-items: flex-start; gap: 10px; }
+
+        /* Choke spec box */
+        .choke-spec { display: none; margin-top: 14px; }
+        .choke-spec.visible { display: block; }
+        .choke-spec-title {
+            font-size: 0.85rem; font-weight: 700; color: var(--text);
+            text-transform: uppercase; letter-spacing: .4px; margin-bottom: 10px;
+            display: flex; align-items: center; gap: 6px;
+        }
+        .choke-spec-title .cs-icon { font-size: 1.1rem; }
+        .choke-spec-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(150px,1fr));
+            gap: 10px; margin-bottom: 14px;
+        }
+        .choke-spec-item {
+            padding: 12px; background: #fff; border: 1px solid var(--border);
+            border-radius: 8px; text-align: center;
+        }
+        .choke-spec-item .csi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-light); text-transform: uppercase; letter-spacing: .3px; margin-bottom: 3px; }
+        .choke-spec-item .csi-value { font-size: 1.3rem; font-weight: 700; color: var(--primary); }
+        .choke-spec-item .csi-sub { font-size: 0.75rem; color: var(--text-light); }
+        .choke-data-table { width: 100%; border-collapse: collapse; margin-bottom: 12px; font-size: 0.85rem; }
+        .choke-data-table th { text-align: left; padding: 6px 10px; font-weight: 600; color: var(--text-light); border-bottom: 2px solid var(--border); font-size: 0.75rem; text-transform: uppercase; letter-spacing: .3px; }
+        .choke-data-table td { padding: 6px 10px; border-bottom: 1px solid var(--border); }
+        .choke-data-table td:last-child { text-align: right; font-weight: 600; color: var(--primary); }
+        .choke-notice {
+            display: none; padding: 10px 14px; border-radius: 8px; margin-top: 10px;
+            font-size: 0.84rem; background: #eff6ff; border: 1px solid #bfdbfe; color: #1e40af;
+        }
+        .choke-notice.visible { display: flex; align-items: flex-start; gap: 8px; }
+        .choke-notice .cn-icon { flex-shrink: 0; font-size: 1rem; }
+
+        @media (max-width: 600px) {
+            .sys-table th, .sys-table td { padding: 4px 3px; font-size: 0.8rem; }
+            .sys-table select, .sys-table input { font-size: 0.8rem; padding: 5px 4px; }
+            .sys-compare { grid-template-columns: 1fr; }
+            .sys-bottom-row { flex-direction: column; align-items: stretch; }
+            .sys-fuse-group { margin-left: 0; }
+        }
+
+        /* Footer */
+        .footer {
+            text-align: center; color: var(--text-light); font-size: 0.8rem;
+            margin-top: 12px; padding-top: 12px;
+        }
+
+        /* Responsive */
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            h1 { font-size: 1.4rem; }
+            .form-row { grid-template-columns: 1fr; gap: 12px; }
+            .result-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+            .result-item .r-value { font-size: 1.2rem; }
+            .gauge-svg { width: 180px; height: 108px; }
+            .gauge-value { font-size: 1.6rem; }
+            .card { padding: 18px; }
+            .info-icon .tooltip { width: 220px; left: auto; right: -10px; transform: none; }
+            .info-icon .tooltip::after { left: auto; right: 16px; transform: none; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>⚡ VFD Power Quality &amp; Current Calculator</h1>
+    <p class="subtitle">Calculate true line current, power factor, and harmonic loading for variable frequency drives</p>
+
+    <!-- Input Card -->
+    <div class="card">
+        <h2><span class="icon">📥</span> Inputs</h2>
+
+        <div class="form-group">
+            <label>Select drive</label>
+            <div class="dropdown-wrapper" id="driveDropdown">
+                <div class="dropdown-selected" tabindex="0" id="driveSelected">Select a drive...</div>
+                <div class="dropdown-panel">
+                    <input type="text" class="dropdown-search" id="driveSearch" placeholder="Search drive..." autocomplete="off">
+                    <div class="dropdown-list" id="driveList"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="custom-fields" id="customFields">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>THDi (%)</label>
+                    <input type="number" id="customTHDi" min="0" max="300" step="1" placeholder="e.g. 40">
+                </div>
+                <div class="form-group">
+                    <label>cos φ</label>
+                    <input type="number" id="customCos" min="0" max="1" step="0.01" placeholder="e.g. 0.97">
+                </div>
+            </div>
+        </div>
+
+        <div class="drive-info" id="driveInfo">
+            <span class="di-icon">🔧</span>
+            <span class="di-text" id="driveInfoText"></span>
+        </div>
+
+        <div class="form-group">
+            <label>Motor current I₁ (A) — fundamental current at full load
+                <span class="info-icon" style="vertical-align:middle;margin-left:4px;">i
+                    <span class="tooltip">Some manufacturers (for example with integrated motors) specify a higher rated current to include internal losses. The app now adjusts the calculation to better match real line loading at partial load.</span>
+                </span>
+            </label>
+            <input type="number" id="motorCurrent" min="0" step="0.1" placeholder="e.g. 10.5">
+            <input type="hidden" id="motorPowerKw" value="0.37">
+            <input type="hidden" id="motorEfficiency" value="0.85">
+            <input type="hidden" id="motorVoltageLL" value="400">
+        </div>
+
+        <div class="load-slider-group">
+            <label>Load level
+                <span class="info-icon" style="vertical-align:middle;margin-left:4px;">i
+                    <span class="tooltip">Lower load typically gives higher THDi (worse harmonic distribution) and lower cos&nbsp;φ. Values are adjusted using typical heuristic factors.</span>
+                </span>
+            </label>
+            <div class="slider-row">
+                <input type="range" id="loadSlider" min="25" max="100" step="25" value="100">
+                <span class="load-badge" id="loadBadge">100%</span>
+            </div>
+            <div class="slider-ticks"><span>25%</span><span>50%</span><span>75%</span><span>100%</span></div>
+        </div>
+
+        <div class="adjusted-info" id="adjustedInfo">
+            <span class="ai-icon">📐</span>
+            <span id="adjustedInfoText"></span>
+        </div>
+
+        <button class="btn btn-primary" id="calcBtn" onclick="calculate()">⚡ Calculate</button>
+    </div>
+
+    <!-- Results Card -->
+    <div class="card results-card" id="resultsCard">
+        <h2>
+            <span class="icon">📊</span> Results
+            <span style="margin-left:auto;">
+                <span class="info-icon">i
+                    <span class="tooltip">THDi and cos&nbsp;φ values are typical estimates based on manufacturer data under normal operating conditions. Real values may vary depending on load, line impedance, and other connected equipment.</span>
+                </span>
+            </span>
+        </h2>
+
+        <!-- Power Factor Gauge -->
+        <div class="gauge-container">
+            <svg class="gauge-svg" viewBox="0 0 220 130">
+                <!-- Background arc -->
+                <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="#e2e8f0" stroke-width="16" stroke-linecap="round"/>
+                <!-- Colored segments -->
+                <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" id="gaugeArcBg" opacity="0.2"/>
+                <!-- Value arc -->
+                <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="url(#gaugeGrad)" stroke-width="16" stroke-linecap="round" id="gaugeArc" stroke-dasharray="0 283"/>
+                <!-- Needle -->
+                <line x1="110" y1="110" x2="110" y2="30" stroke="var(--text)" stroke-width="2.5" stroke-linecap="round" id="gaugeNeedle" transform="rotate(-90, 110, 110)"/>
+                <circle cx="110" cy="110" r="6" fill="var(--text)"/>
+                <!-- Labels -->
+                <text x="14" y="128" font-size="10" fill="#64748b" font-weight="600">0</text>
+                <text x="196" y="128" font-size="10" fill="#64748b" font-weight="600">1</text>
+                <text x="106" y="16" font-size="10" fill="#64748b" font-weight="600" text-anchor="middle">λ</text>
+                <defs>
+                    <linearGradient id="gaugeGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                        <stop offset="0%" stop-color="#ef4444"/>
+                        <stop offset="40%" stop-color="#f59e0b"/>
+                        <stop offset="70%" stop-color="#3b82f6"/>
+                        <stop offset="100%" stop-color="#16a34a"/>
+                    </linearGradient>
+                </defs>
+            </svg>
+            <div class="gauge-value" id="gaugeValueText">—</div>
+            <div class="gauge-label">Total Power Factor (λ)</div>
+        </div>
+
+        <!-- Result grid -->
+        <div class="result-grid">
+            <div class="result-item" id="riLambda">
+                <div class="r-label">Power Factor λ</div>
+                <div class="r-value" id="resLambda">—</div>
+            </div>
+            <div class="result-item" id="riIrms">
+                <div class="r-label">Line Current I<sub>RMS</sub></div>
+                <div class="r-value" id="resIrms">—</div>
+                <div class="r-unit">A</div>
+            </div>
+            <div class="result-item" id="riI1">
+                <div class="r-label">Fundamental I₁</div>
+                <div class="r-value" id="resI1">—</div>
+                <div class="r-unit">A</div>
+            </div>
+            <div class="result-item" id="riWaste">
+                <div class="r-label">Harmonic Current</div>
+                <div class="r-value" id="resWaste">—</div>
+                <div class="r-unit">A</div>
+            </div>
+            <div class="result-item" id="riTHDi">
+                <div class="r-label">THDi</div>
+                <div class="r-value" id="resTHDi">—</div>
+                <div class="r-unit">%</div>
+            </div>
+            <div class="result-item" id="riCos">
+                <div class="r-label">cos φ</div>
+                <div class="r-value" id="resCos">—</div>
+            </div>
+        </div>
+
+        <!-- Current comparison bars -->
+        <div class="current-compare">
+            <h3>Current Comparison</h3>
+            <div class="bar-group">
+                <div class="bar-label">
+                    <span>Fundamental current (I₁)</span>
+                    <span id="barI1Val">—</span>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill fundamental" id="barI1" style="width:0%"></div>
+                </div>
+            </div>
+            <div class="bar-group">
+                <div class="bar-label">
+                    <span>Line current (I<sub>RMS</sub>)</span>
+                    <span id="barIrmsVal">—</span>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill rms" id="barIrms" style="width:0%"></div>
+                </div>
+            </div>
+            <div class="bar-group">
+                <div class="bar-label">
+                    <span>Harmonic current (I<sub>h</sub>)</span>
+                    <span id="barIhVal">—</span>
+                </div>
+                <div class="bar-track">
+                    <div class="bar-fill harmonic" id="barIh" style="width:0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendation -->
+        <div class="recommendation" id="recommendation">
+            <span class="rec-icon" id="recIcon"></span>
+            <span id="recText"></span>
+        </div>
+
+        <!-- Low-current notice -->
+        <div class="recommendation" id="lowCurrentNotice">
+            <span class="rec-icon">ℹ️</span>
+            <span id="lowCurrentText"></span>
+        </div>
+    </div>
+
+    <!-- System Card -->
+    <div class="card">
+        <h2><span class="icon">🏭</span> System View — Multiple Motors</h2>
+        <div style="overflow-x:auto;">
+            <table class="sys-table" id="sysTable">
+                <thead>
+                    <tr>
+                        <th class="col-qty">Qty</th>
+                        <th class="col-drive">Drive</th>
+                        <th class="col-amp">I₁ (A)</th>
+                        <th class="col-load">Load %</th>
+                        <th class="col-irms">I<sub>RMS</sub></th>
+                        <th class="col-del"></th>
+                    </tr>
+                </thead>
+                <tbody id="sysBody"></tbody>
+            </table>
+        </div>
+        <div class="sys-bottom-row">
+            <button class="sys-add-btn" onclick="sysAddRow()">+ Add motor</button>
+            <div class="sys-fuse-group">
+                <label>Fuse:</label>
+                <select id="sysFuse">
+                    <option value="10">10 A</option>
+                    <option value="13">13 A</option>
+                    <option value="16" selected>16 A</option>
+                    <option value="20">20 A</option>
+                    <option value="25">25 A</option>
+                    <option value="32">32 A</option>
+                    <option value="40">40 A</option>
+                    <option value="50">50 A</option>
+                    <option value="63">63 A</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn btn-primary" onclick="sysCalculate()">⚡ Calculate system</button>
+
+        <div class="sys-results" id="sysResults">
+            <div class="sys-summary">
+                <div class="sys-summary-grid">
+                    <div class="sys-summary-item" id="ssTotalIrms">
+                        <div class="ss-label">Total I<sub>RMS</sub></div>
+                        <div class="ss-value" id="ssTotalIrmsVal">—</div>
+                        <div class="ss-unit">A</div>
+                    </div>
+                    <div class="sys-summary-item" id="ssTotalI1">
+                        <div class="ss-label">Total I₁</div>
+                        <div class="ss-value" id="ssTotalI1Val">—</div>
+                        <div class="ss-unit">A</div>
+                    </div>
+                    <div class="sys-summary-item" id="ssTotalIh">
+                        <div class="ss-label">Total I<sub>h</sub></div>
+                        <div class="ss-value" id="ssTotalIhVal">—</div>
+                        <div class="ss-unit">A</div>
+                    </div>
+                    <div class="sys-summary-item" id="ssMotorCount">
+                        <div class="ss-label">Motor count</div>
+                        <div class="ss-value" id="ssMotorCountVal">—</div>
+                    </div>
+                    <div class="sys-summary-item" id="ssLambda">
+                        <div class="ss-label">System Power Factor λ</div>
+                        <div class="ss-value" id="ssLambdaVal">—</div>
+                    </div>
+                </div>
+
+                <div class="sys-drossel-rec" id="sysDrosselRec">
+                    <span style="font-size:1.1rem;flex-shrink:0;">⚡</span>
+                    <span id="sysDrosselText"></span>
+                </div>
+
+                <div class="sys-compare" id="sysCompare" style="display:none;">
+                    <div class="sys-compare-box without">
+                        <div class="sc-label">Without choke</div>
+                        <div class="sc-value" id="scWithout">—</div>
+                        <div class="sc-sub">A (current)</div>
+                    </div>
+                    <div class="sys-compare-box with">
+                        <div class="sc-label">With shared choke</div>
+                        <div class="sc-value" id="scWith">—</div>
+                        <div class="sc-sub">A (~35% THDi)</div>
+                    </div>
+                </div>
+
+                <div class="sys-fuse-alert" id="sysFuseAlert">
+                    <span class="sfa-icon" id="sfaIcon"></span>
+                    <span id="sfaText"></span>
+                </div>
+
+                <!-- Choke Specification -->
+                <div class="choke-spec" id="chokeSpec">
+                    <div class="choke-spec-title"><span class="cs-icon">🔌</span> Recommended line choke</div>
+
+                    <table class="choke-data-table">
+                        <thead><tr><th>Parameter</th><th>Value</th></tr></thead>
+                        <tbody>
+                            <tr><td>Total I₁ (fundamental)</td><td id="cdI1">—</td></tr>
+                            <tr><td>Total I<sub>RMS</sub> (without choke)</td><td id="cdIrms">—</td></tr>
+                            <tr><td>Estimated I<sub>RMS</sub> (with choke)</td><td id="cdIrmsChoke">—</td></tr>
+                            <tr><td>Reduction</td><td id="cdReduction">—</td></tr>
+                        </tbody>
+                    </table>
+
+                    <div class="choke-spec-grid">
+                        <div class="choke-spec-item">
+                            <div class="csi-label">Rated current</div>
+                            <div class="csi-value" id="csRatedI">—</div>
+                            <div class="csi-sub">A (incl. 10% margin)</div>
+                        </div>
+                        <div class="choke-spec-item">
+                            <div class="csi-label">Inductance (3% u<sub>k</sub>)</div>
+                            <div class="csi-value" id="csL3">—</div>
+                            <div class="csi-sub">mH</div>
+                        </div>
+                        <div class="choke-spec-item">
+                            <div class="csi-label">Inductance (4% u<sub>k</sub>)</div>
+                            <div class="csi-value" id="csL4">—</div>
+                            <div class="csi-sub">mH</div>
+                        </div>
+                    </div>
+
+                    <div class="choke-notice" id="chokeSmallMotorNotice">
+                        <span class="cn-icon">💡</span>
+                        <span id="chokeSmallMotorText"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer">
+        VFD Power Quality &amp; Current Calculator &bull; Created by Henrik Alexanderson
+    </div>
+</div>
+
+<script>
+// ── Drive Database ──
+const DRIVES = [
+    { manufacturer: "SEW Eurodrive", model: "MDX61B (Standard)", thdi: 120, cos: 0.97 },
+    { manufacturer: "SEW Eurodrive", model: "MDX90A Technology", thdi: 40, cos: 0.97 },
+    { manufacturer: "SEW Eurodrive", model: "MOVIDRIVE MDX91A", thdi: 40, cos: 0.97 },
+    { manufacturer: "SEW Eurodrive", model: "MOVIMOT Advanced", thdi: 42, cos: 0.97 },
+    { manufacturer: "Siemens", model: "G120C (Built-in choke)", thdi: 38, cos: 0.96 },
+    { manufacturer: "Siemens", model: "V20 (No filter)", thdi: 110, cos: 0.95 },
+    { manufacturer: "Siemens", model: "S120 (ALM / Active Front End)", thdi: 4, cos: 1.0 },
+    { manufacturer: "ABB", model: "ACS380", thdi: 105, cos: 0.96 },
+    { manufacturer: "ABB", model: "ACS580 (Built-in choke)", thdi: 35, cos: 0.98 },
+    { manufacturer: "ABB", model: "ACS880 (ULH)", thdi: 3, cos: 1.0 },
+    { manufacturer: "Danfoss", model: "VLT FC-51", thdi: 115, cos: 0.94 },
+    { manufacturer: "Danfoss", model: "VLT FC-302", thdi: 40, cos: 0.98 },
+    { manufacturer: "Schneider", model: "ATV320", thdi: 100, cos: 0.96 },
+    { manufacturer: "Schneider", model: "ATV630", thdi: 35, cos: 0.98 },
+    { manufacturer: "Lenze", model: "Smart Motor", thdi: 110, cos: 0.95 },
+    { manufacturer: "Lenze", model: "Motec Motor", thdi: 110, cos: 0.95 },
+    { manufacturer: "Lenze", model: "i550 Protec", thdi: 110, cos: 0.95 },
+    { manufacturer: "Lenze", model: "i950 Servo", thdi: 45, cos: 0.97 },
+];
+
+const CUSTOM_KEY = "__custom__";
+
+// ── Load level adjustment factors ──
+const LOAD_FACTORS = {
+    100: { thdiMult: 1.0,  cosMult: 1.0  },
+    75:  { thdiMult: 1.1,  cosMult: 0.95 },
+    50:  { thdiMult: 1.3,  cosMult: 0.85 },
+    25:  { thdiMult: 1.5,  cosMult: 0.70 },
+};
+
+// Motor current vs load - realistic curve for induction motors (linear interpolation)
+function motorCurrentFactor(loadPct) {
+    const pts = [
+        { load: 0, factor: 0.40 },
+        { load: 25, factor: 0.55 },
+        { load: 50, factor: 0.75 },
+        { load: 75, factor: 0.90 },
+        { load: 100, factor: 1.00 },
+    ];
+    const lp = Math.max(0, Math.min(100, loadPct));
+    for (let i = 0; i < pts.length - 1; i++) {
+        if (lp >= pts[i].load && lp <= pts[i + 1].load) {
+            const t = (lp - pts[i].load) / (pts[i + 1].load - pts[i].load);
+            return pts[i].factor + t * (pts[i + 1].factor - pts[i].factor);
+        }
+    }
+    return pts[pts.length - 1].factor;
+}
+
+function getAdjusted(baseThdi, baseCos, loadPct) {
+    const f = LOAD_FACTORS[loadPct] || LOAD_FACTORS[100];
+    return {
+        thdi: baseThdi * f.thdiMult,
+        cos: Math.min(1, baseCos * f.cosMult),
+    };
+}
+
+function calcTheoreticalCurrent(powerKw, voltageLL, cosphi, eta) {
+    const p = Math.max(0, powerKw) * 1000;
+    const u = Math.max(1, voltageLL);
+    const c = Math.max(0.1, Math.min(1, cosphi));
+    const e = Math.max(0.5, Math.min(1, eta));
+    return p / (Math.sqrt(3) * u * c * e);
+}
+
+function lowLoadSeverity(loadPct) {
+    if (loadPct <= 25) return 1.0;
+    if (loadPct <= 50) return 0.65;
+    if (loadPct <= 75) return 0.30;
+    return 0.0;
+}
+
+function calcSafetyIndex(inputCurrent, powerKw, voltageLL, cosphi, eta) {
+    const iTheory = calcTheoreticalCurrent(powerKw, voltageLL, cosphi, eta);
+    const ratio = iTheory > 0 ? (inputCurrent / iTheory) : 1;
+    return Math.max(0, Math.min(1, (ratio - 1.05) / 0.65));
+}
+
+// ── Build dropdown ──
+function buildDropdown() {
+    const list = document.getElementById('driveList');
+    list.innerHTML = '';
+
+    // Group by manufacturer
+    const groups = {};
+    DRIVES.forEach(d => {
+        if (!groups[d.manufacturer]) groups[d.manufacturer] = [];
+        groups[d.manufacturer].push(d);
+    });
+
+    Object.keys(groups).forEach(mfr => {
+        const lbl = document.createElement('div');
+        lbl.className = 'dropdown-group-label';
+        lbl.textContent = mfr;
+        list.appendChild(lbl);
+
+        groups[mfr].forEach((d, i) => {
+            const item = document.createElement('div');
+            item.className = 'dropdown-item';
+            item.dataset.key = `${mfr}|${d.model}`;
+            item.dataset.mfr = mfr;
+            item.dataset.model = d.model;
+            item.innerHTML = `<span>${d.model}</span><span class="item-meta">THDi ${d.thdi}% &middot; cos&thinsp;φ ${d.cos.toFixed(2)}</span>`;
+            item.addEventListener('click', () => selectDrive(item));
+            list.appendChild(item);
+        });
+    });
+
+    // Custom option
+    const customLbl = document.createElement('div');
+    customLbl.className = 'dropdown-group-label';
+    customLbl.textContent = 'Custom';
+    list.appendChild(customLbl);
+
+    const customItem = document.createElement('div');
+    customItem.className = 'dropdown-item';
+    customItem.dataset.key = CUSTOM_KEY;
+    customItem.innerHTML = `<span>Enter custom values...</span><span class="item-meta">✏️</span>`;
+    customItem.addEventListener('click', () => selectDrive(customItem));
+    list.appendChild(customItem);
+}
+
+let selectedDrive = null;
+
+function selectDrive(item) {
+    document.querySelectorAll('#driveList .dropdown-item').forEach(el => el.classList.remove('selected'));
+    item.classList.add('selected');
+
+    const key = item.dataset.key;
+    const selected = document.getElementById('driveSelected');
+    const customFields = document.getElementById('customFields');
+    const driveInfo = document.getElementById('driveInfo');
+
+    if (key === CUSTOM_KEY) {
+        selectedDrive = { custom: true };
+        selected.textContent = 'Custom';
+        customFields.classList.add('visible');
+        driveInfo.classList.remove('visible');
+    } else {
+        const d = DRIVES.find(d => `${d.manufacturer}|${d.model}` === key);
+        selectedDrive = d;
+        selected.textContent = `${d.manufacturer} — ${d.model}`;
+        customFields.classList.remove('visible');
+        driveInfo.classList.add('visible');
+        updateDriveInfoBadge();
+    }
+    updateAdjustedInfo();
+
+    closeDropdown();
+}
+
+// ── Dropdown open/close ──
+const wrapper = document.getElementById('driveDropdown');
+const selectedEl = document.getElementById('driveSelected');
+const searchEl = document.getElementById('driveSearch');
+
+selectedEl.addEventListener('click', () => {
+    wrapper.classList.toggle('open');
+    if (wrapper.classList.contains('open')) {
+        searchEl.value = '';
+        filterList('');
+        setTimeout(() => searchEl.focus(), 50);
+    }
+});
+
+searchEl.addEventListener('input', () => filterList(searchEl.value));
+
+function filterList(q) {
+    const lower = q.toLowerCase();
+    const items = document.querySelectorAll('#driveList .dropdown-item');
+    const groups = document.querySelectorAll('#driveList .dropdown-group-label');
+    const visibleGroups = new Set();
+
+    items.forEach(item => {
+        const text = (item.dataset.mfr || '') + ' ' + (item.dataset.model || '') + ' ' + item.textContent;
+        const match = !q || text.toLowerCase().includes(lower);
+        item.classList.toggle('hidden', !match);
+        if (match && item.dataset.key !== CUSTOM_KEY) {
+            visibleGroups.add(item.dataset.mfr);
+        }
+        if (match && item.dataset.key === CUSTOM_KEY) {
+            visibleGroups.add('__custom_group__');
+        }
+    });
+
+    groups.forEach(g => {
+        const name = g.textContent;
+        const isCustomGroup = name === 'Custom';
+        g.style.display = (isCustomGroup ? visibleGroups.has('__custom_group__') : visibleGroups.has(name)) ? '' : 'none';
+    });
+}
+
+function closeDropdown() { wrapper.classList.remove('open'); }
+
+// ── Load slider logic ──
+const loadSlider = document.getElementById('loadSlider');
+const loadBadge = document.getElementById('loadBadge');
+
+function updateSliderTrack() {
+    const pct = ((loadSlider.value - 25) / 75) * 100;
+    loadSlider.style.setProperty('--pct', pct + '%');
+    loadBadge.textContent = loadSlider.value + '%';
+}
+
+loadSlider.addEventListener('input', () => {
+    updateSliderTrack();
+    updateDriveInfoBadge();
+    updateAdjustedInfo();
+});
+updateSliderTrack();
+
+function updateDriveInfoBadge() {
+    if (!selectedDrive || selectedDrive.custom) return;
+    const d = selectedDrive;
+    document.getElementById('driveInfoText').innerHTML =
+        `<strong>${d.manufacturer} ${d.model}</strong> — THDi: ${d.thdi}% &middot; cos&thinsp;φ: ${d.cos.toFixed(2)}`;
+}
+
+function updateAdjustedInfo() {
+    const el = document.getElementById('adjustedInfo');
+    const txt = document.getElementById('adjustedInfoText');
+    const load = parseInt(loadSlider.value);
+
+    if (load === 100 || !selectedDrive) {
+        el.classList.remove('visible');
+        return;
+    }
+
+    let baseThdi, baseCos;
+    if (selectedDrive.custom) {
+        baseThdi = parseFloat(document.getElementById('customTHDi').value);
+        baseCos = parseFloat(document.getElementById('customCos').value);
+        if (isNaN(baseThdi) || isNaN(baseCos)) { el.classList.remove('visible'); return; }
+    } else {
+        baseThdi = selectedDrive.thdi;
+        baseCos = selectedDrive.cos;
+    }
+
+    const adj = getAdjusted(baseThdi, baseCos, load);
+    el.classList.add('visible');
+    txt.innerHTML = `<strong>Adjusted values at ${load}% load:</strong> THDi: ${baseThdi}% → <strong>${adj.thdi.toFixed(1)}%</strong> &middot; cos&thinsp;φ: ${baseCos.toFixed(2)} → <strong>${adj.cos.toFixed(3)}</strong>`;
+}
+
+document.addEventListener('click', e => {
+    if (!wrapper.contains(e.target)) closeDropdown();
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeDropdown();
+});
+
+// ── Calculation ──
+function calculate() {
+    if (!selectedDrive) { shakeBtn(); return; }
+
+    let baseThdi, baseCos;
+    if (selectedDrive.custom) {
+        baseThdi = parseFloat(document.getElementById('customTHDi').value);
+        baseCos = parseFloat(document.getElementById('customCos').value);
+        if (isNaN(baseThdi) || isNaN(baseCos) || baseCos <= 0 || baseCos > 1 || baseThdi < 0) {
+            shakeBtn(); return;
+        }
+    } else {
+        baseThdi = selectedDrive.thdi;
+        baseCos = selectedDrive.cos;
+    }
+
+    const I1input = parseFloat(document.getElementById('motorCurrent').value);
+    if (isNaN(I1input) || I1input <= 0) { shakeBtn(); return; }
+
+    // Apply load level adjustments
+    const loadPct = parseInt(loadSlider.value);
+    const adj = getAdjusted(baseThdi, baseCos, loadPct);
+    let thdi = adj.thdi;
+    const cosph = adj.cos;
+
+    // Hidden plausibility check for apparent rated current vs theoretical motor current
+    const powerKw = parseFloat(document.getElementById('motorPowerKw').value);
+    const eta = parseFloat(document.getElementById('motorEfficiency').value);
+    const voltageLL = parseFloat(document.getElementById('motorVoltageLL').value);
+    const safetyIndex = calcSafetyIndex(I1input, powerKw, voltageLL, cosph, eta);
+    const severity = lowLoadSeverity(loadPct);
+
+    // More forgiving harmonic model at low load when nameplate current appears conservative
+    const thdiRelief = 1 - (0.45 * safetyIndex * severity);
+    thdi = Math.max(3, thdi * thdiRelief);
+
+    // Slight current relief for apparent-rated integrated motor nameplates at partial load
+    const currentRelief = 1 - (0.35 * safetyIndex * severity);
+    const I1 = I1input * motorCurrentFactor(loadPct) * currentRelief;
+
+    const thdiDecimal = thdi / 100;
+    const sqrtFactor = Math.sqrt(1 + thdiDecimal * thdiDecimal);
+
+    // Total power factor λ
+    const lambda = cosph * (1 / sqrtFactor);
+
+    // True RMS current
+    const Irms = I1 * sqrtFactor;
+
+    // Harmonic (waste) current  I² = I1² + Ih²  →  Ih = √(Irms² − I1²)
+    const Ih = Math.sqrt(Math.max(0, Irms * Irms - I1 * I1));
+
+    // Display results
+    const card = document.getElementById('resultsCard');
+    card.classList.add('visible');
+
+    document.getElementById('resLambda').textContent = lambda.toFixed(3);
+    document.getElementById('resIrms').textContent = Irms.toFixed(2);
+    document.getElementById('resI1').textContent = I1.toFixed(2);
+    document.getElementById('resWaste').textContent = Ih.toFixed(2);
+    document.getElementById('resTHDi').textContent = thdi.toFixed(1);
+    document.getElementById('resCos').textContent = cosph.toFixed(3);
+
+    // Gauge
+    animateGauge(lambda);
+    document.getElementById('gaugeValueText').textContent = lambda.toFixed(3);
+
+    // Color code results
+    const riLambda = document.getElementById('riLambda');
+    riLambda.classList.remove('good', 'warn');
+    riLambda.classList.add(lambda >= 0.9 ? 'good' : 'warn');
+
+    // Bars
+    const maxVal = Irms * 1.05;
+    animateBar('barI1', (I1 / maxVal) * 100, I1.toFixed(2) + ' A');
+    animateBar('barIrms', (Irms / maxVal) * 100, Irms.toFixed(2) + ' A');
+    animateBar('barIh', (Ih / maxVal) * 100, Ih.toFixed(2) + ' A');
+
+    document.getElementById('barI1Val').textContent = I1.toFixed(2) + ' A';
+    document.getElementById('barIrmsVal').textContent = Irms.toFixed(2) + ' A';
+    document.getElementById('barIhVal').textContent = Ih.toFixed(2) + ' A';
+
+    // Recommendation
+    const rec = document.getElementById('recommendation');
+    const recIcon = document.getElementById('recIcon');
+    const recText = document.getElementById('recText');
+    rec.classList.remove('warn', 'good', 'visible');
+
+    if (thdi > 50) {
+        rec.classList.add('visible', 'warn');
+        recIcon.textContent = '⚠️';
+        recText.innerHTML = `<strong>Recommendation:</strong> Install an external line choke or DC choke to reduce harmonic content. THDi of ${thdi.toFixed(1)}% causes a noticeable extra line load (+${((sqrtFactor - 1) * 100).toFixed(1)}% current increase).`;
+    } else {
+        rec.classList.add('visible', 'good');
+        recIcon.textContent = '✅';
+        recText.innerHTML = `<strong>Good harmonic level.</strong> THDi ${thdi.toFixed(1)}% is within acceptable limits. Current increase versus fundamental is +${((sqrtFactor - 1) * 100).toFixed(1)}%.`;
+    }
+
+    // Low-current notice
+    const lcNotice = document.getElementById('lowCurrentNotice');
+    lcNotice.classList.remove('visible', 'warn', 'good');
+    if (Irms < 0.5) {
+        lcNotice.classList.add('visible', 'warn');
+        document.getElementById('lowCurrentText').innerHTML =
+            '<strong>Note:</strong> At very low currents (&lt;0.5 A), measurement errors can occur with common clamp meters, and internal drive energy-saving functions (such as in Lenze Smart Motor) can reduce current even further.';
+    }
+
+    card.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function shakeBtn() {
+    const btn = document.getElementById('calcBtn');
+    btn.style.animation = 'none';
+    btn.offsetHeight;
+    btn.style.animation = 'shake 0.4s ease';
+    setTimeout(() => btn.style.animation = '', 500);
+}
+
+// ── Gauge animation ──
+function animateGauge(lambda) {
+    const arc = document.getElementById('gaugeArc');
+    const needle = document.getElementById('gaugeNeedle');
+    const totalLen = 283; // approx semicircle perimeter for r=90
+    const clamped = Math.max(0, Math.min(1, lambda));
+    const targetDash = clamped * totalLen;
+    const targetAngle = -90 + clamped * 180;
+
+    // Animate with requestAnimationFrame
+    let start = null;
+    const duration = 700;
+    const startDash = parseFloat(arc.getAttribute('stroke-dasharray').split(' ')[0]) || 0;
+    const currentTransform = needle.getAttribute('transform') || 'rotate(-90, 110, 110)';
+    const startAngle = parseFloat(currentTransform.match(/rotate\(([-\d.]+)/)?.[1] || -90);
+
+    function step(ts) {
+        if (!start) start = ts;
+        const p = Math.min(1, (ts - start) / duration);
+        const ease = 1 - Math.pow(1 - p, 3); // ease-out cubic
+
+        const d = startDash + (targetDash - startDash) * ease;
+        arc.setAttribute('stroke-dasharray', `${d} ${totalLen}`);
+
+        const a = startAngle + (targetAngle - startAngle) * ease;
+        needle.setAttribute('transform', `rotate(${a}, 110, 110)`);
+
+        if (p < 1) requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+}
+
+function animateBar(id, pct, label) {
+    const el = document.getElementById(id);
+    setTimeout(() => {
+        el.style.width = Math.max(4, pct) + '%';
+        el.textContent = '';
+    }, 50);
+}
+
+// ══════════════════════════════════════
+// ── System-vy (multi-motor) ──
+// ══════════════════════════════════════
+let sysRowId = 0;
+
+function buildDriveOptions() {
+    let html = '<option value="">Select...</option>';
+    const groups = {};
+    DRIVES.forEach((d, i) => {
+        if (!groups[d.manufacturer]) groups[d.manufacturer] = [];
+        groups[d.manufacturer].push({ idx: i, d });
+    });
+    Object.keys(groups).forEach(mfr => {
+        html += `<optgroup label="${mfr}">`;
+        groups[mfr].forEach(({ idx, d }) => {
+            html += `<option value="${idx}">${d.model} (THDi ${d.thdi}%)</option>`;
+        });
+        html += '</optgroup>';
+    });
+    return html;
+}
+
+const driveOptionsHTML = buildDriveOptions();
+
+function sysAddRow() {
+    sysRowId++;
+    const tr = document.createElement('tr');
+    tr.id = 'sysRow' + sysRowId;
+    tr.innerHTML = `
+        <td class="col-qty"><input type="number" min="1" value="1" step="1" class="sr-qty"></td>
+        <td class="col-drive"><select class="sr-drive">${driveOptionsHTML}</select></td>
+        <td class="col-amp"><input type="number" min="0" step="0.1" placeholder="A" class="sr-amp"></td>
+        <td class="col-load">
+            <select class="sr-load">
+                <option value="100">100%</option>
+                <option value="75">75%</option>
+                <option value="50">50%</option>
+                <option value="25">25%</option>
+            </select>
+        </td>
+        <td class="col-irms"><span class="sr-irms-val">—</span></td>
+        <td class="col-del"><button class="sys-row-delete" onclick="sysDelRow(${sysRowId})" title="Remove">✕</button></td>
+    `;
+    document.getElementById('sysBody').appendChild(tr);
+
+    // Live preview per row
+    tr.querySelectorAll('input, select').forEach(el => el.addEventListener('input', () => sysPreviewRow(tr)));
+}
+
+function sysDelRow(id) {
+    const row = document.getElementById('sysRow' + id);
+    if (row) row.remove();
+}
+
+function sysCalcRow(tr) {
+    const qty = parseInt(tr.querySelector('.sr-qty').value) || 0;
+    const driveIdx = tr.querySelector('.sr-drive').value;
+    const ampVal = parseFloat(tr.querySelector('.sr-amp').value);
+    const loadPct = parseInt(tr.querySelector('.sr-load').value) || 100;
+
+    if (driveIdx === '' || isNaN(ampVal) || ampVal <= 0 || qty <= 0) return null;
+
+    const d = DRIVES[parseInt(driveIdx)];
+    const adj = getAdjusted(d.thdi, d.cos, loadPct);
+
+    const powerKw = parseFloat(document.getElementById('motorPowerKw').value);
+    const eta = parseFloat(document.getElementById('motorEfficiency').value);
+    const voltageLL = parseFloat(document.getElementById('motorVoltageLL').value);
+    const safetyIndex = calcSafetyIndex(ampVal, powerKw, voltageLL, adj.cos, eta);
+    const severity = lowLoadSeverity(loadPct);
+
+    const thdi = Math.max(3, adj.thdi * (1 - (0.45 * safetyIndex * severity)));
+    const currentRelief = 1 - (0.35 * safetyIndex * severity);
+    const I1 = ampVal * motorCurrentFactor(loadPct) * currentRelief;
+    const thdiDec = thdi / 100;
+    const sqrtF = Math.sqrt(1 + thdiDec * thdiDec);
+    const Irms = I1 * sqrtF;
+    const Ih = Math.sqrt(Math.max(0, Irms * Irms - I1 * I1));
+
+    return { qty, I1: I1 * qty, Irms: Irms * qty, Ih: Ih * qty, thdi: adj.thdi, cos: adj.cos, baseCos: d.cos, baseThdi: d.thdi, ampVal, loadPct };
+}
+
+function sysPreviewRow(tr) {
+    const res = sysCalcRow(tr);
+    const cell = tr.querySelector('.sr-irms-val');
+    cell.textContent = res ? (res.Irms).toFixed(2) + ' A' : '—';
+}
+
+function sysCalculate() {
+    const rows = document.querySelectorAll('#sysBody tr');
+    if (rows.length === 0) return;
+
+    let totalIrms = 0, totalI1 = 0, totalIh = 0, motorCount = 0;
+    let totalActiveCurrent = 0;
+    let totalIrmsWithChoke = 0;
+    let valid = false;
+    const validRows = [];
+
+    rows.forEach(tr => {
+        const r = sysCalcRow(tr);
+        if (!r) return;
+        valid = true;
+        validRows.push(r);
+        totalIrms += r.Irms;
+        totalI1 += r.I1;
+        totalIh += r.Ih;
+        totalActiveCurrent += r.I1 * r.cos;
+        motorCount += r.qty;
+
+        // With choke: recalculate assuming THDi = 35%
+        const chokeThdi = 35;
+        const I1singleCorrected = r.I1 / r.qty;
+        const chokeSqrtF = Math.sqrt(1 + (chokeThdi / 100) ** 2);
+        totalIrmsWithChoke += I1singleCorrected * chokeSqrtF * r.qty;
+    });
+
+    if (!valid) return;
+
+    const panel = document.getElementById('sysResults');
+    panel.classList.add('visible');
+
+    document.getElementById('ssTotalIrmsVal').textContent = totalIrms.toFixed(2);
+    document.getElementById('ssTotalI1Val').textContent = totalI1.toFixed(2);
+    document.getElementById('ssTotalIhVal').textContent = totalIh.toFixed(2);
+    document.getElementById('ssMotorCountVal').textContent = motorCount;
+    const lambdaSystem = totalIrms > 0 ? Math.max(0, Math.min(1, totalActiveCurrent / totalIrms)) : 0;
+    document.getElementById('ssLambdaVal').textContent = lambdaSystem.toFixed(3);
+
+    const lambdaItem = document.getElementById('ssLambda');
+    lambdaItem.classList.remove('warn', 'good');
+    lambdaItem.classList.add(lambdaSystem >= 0.9 ? 'good' : 'warn');
+
+    // Choke recommendation
+    const drosselRec = document.getElementById('sysDrosselRec');
+    const compare = document.getElementById('sysCompare');
+    drosselRec.classList.remove('visible');
+    compare.style.display = 'none';
+
+    if (totalIrms > 10) {
+        drosselRec.classList.add('visible');
+        const saving = totalIrms - totalIrmsWithChoke;
+        document.getElementById('sysDrosselText').innerHTML =
+            `<strong>Recommendation:</strong> For total I<sub>RMS</sub> > 10 A, a shared line choke is recommended. Estimated benefit: <strong>${saving.toFixed(1)} A</strong> lower line current.`;
+
+        compare.style.display = 'grid';
+        document.getElementById('scWithout').textContent = totalIrms.toFixed(2);
+        document.getElementById('scWith').textContent = totalIrmsWithChoke.toFixed(2);
+    }
+
+    // Choke specification
+    updateChokeSpec(totalI1, totalIrms, totalIrmsWithChoke, motorCount, validRows);
+
+    // Fuse check
+    const fuseVal = parseInt(document.getElementById('sysFuse').value);
+    const fuseAlert = document.getElementById('sysFuseAlert');
+    fuseAlert.classList.remove('visible', 'danger', 'ok');
+
+    if (totalIrms > fuseVal) {
+        fuseAlert.classList.add('visible', 'danger');
+        document.getElementById('sfaIcon').textContent = '🔴';
+        document.getElementById('sfaText').innerHTML =
+            `<strong>Warning:</strong> Total I<sub>RMS</sub> (${totalIrms.toFixed(2)} A) exceeds selected fuse (${fuseVal} A) by <strong>${(totalIrms - fuseVal).toFixed(1)} A</strong>. Choose a larger fuse or reduce load.`;
+    } else {
+        fuseAlert.classList.add('visible', 'ok');
+        document.getElementById('sfaIcon').textContent = '✅';
+        const margin = ((fuseVal - totalIrms) / fuseVal * 100).toFixed(0);
+        document.getElementById('sfaText').innerHTML =
+            `Fuse ${fuseVal} A is sufficient. Margin: <strong>${margin}%</strong> (${(fuseVal - totalIrms).toFixed(1)} A remaining).`;
+    }
+
+    // Color-code total Irms
+    const irmsItem = document.getElementById('ssTotalIrms');
+    irmsItem.classList.remove('warn', 'good');
+    irmsItem.classList.add(totalIrms > fuseVal ? 'warn' : 'good');
+
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// ── Choke inductance calculation ──
+// L = (u_k × U_phase) / (2π × f × I_total)  [H] → ×1000 for mH
+function calcChokeInductance(uk, Itotal) {
+    const Uphase = 230; // V
+    const f = 50;       // Hz
+    if (Itotal <= 0) return 0;
+    return (uk * Uphase) / (2 * Math.PI * f * Itotal) * 1000;
+}
+
+function updateChokeSpec(totalI1, totalIrms, totalIrmsWithChoke, motorCount, validRows) {
+    const spec = document.getElementById('chokeSpec');
+    const notice = document.getElementById('chokeSmallMotorNotice');
+    notice.classList.remove('visible');
+
+    if (totalI1 <= 0) { spec.classList.remove('visible'); return; }
+    spec.classList.add('visible');
+
+    // Data table
+    document.getElementById('cdI1').textContent = totalI1.toFixed(2) + ' A';
+    document.getElementById('cdIrms').textContent = totalIrms.toFixed(2) + ' A';
+    document.getElementById('cdIrmsChoke').textContent = totalIrmsWithChoke.toFixed(2) + ' A';
+    const reductionPct = ((totalIrms - totalIrmsWithChoke) / totalIrms * 100);
+    document.getElementById('cdReduction').textContent = '−' + reductionPct.toFixed(1) + '%';
+
+    // Rated current with 10% safety margin
+    const ratedI = totalIrms * 1.10;
+    document.getElementById('csRatedI').textContent = ratedI.toFixed(1);
+
+    // Inductance at 3% and 4% impedance
+    const L3 = calcChokeInductance(0.03, totalI1);
+    const L4 = calcChokeInductance(0.04, totalI1);
+    document.getElementById('csL3').textContent = L3.toFixed(2);
+    document.getElementById('csL4').textContent = L4.toFixed(2);
+
+    // Small motor warning: ≥5 motors all ≤3 A
+    const manySmall = motorCount >= 5 && validRows.every(r => r.ampVal <= 3);
+    if (manySmall) {
+        notice.classList.add('visible');
+        document.getElementById('chokeSmallMotorText').innerHTML =
+            '<strong>Note:</strong> With many small motors on a shared choke, it is important to size the choke for total current to achieve the correct filtering effect.';
+    }
+}
+
+// ── Init ──
+buildDropdown();
+sysAddRow(); // start with one empty row
+
+// Keyboard shortcut: Enter to calculate
+document.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !wrapper.classList.contains('open')) {
+        calculate();
+    }
+});
+</script>
+
+<style>
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+</style>
+
+</body>
+</html>
