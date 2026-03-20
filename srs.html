@@ -1,0 +1,1237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SRS – Safety Requirements Specification</title>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #dbeafe;
+            --primary-lighter: #eff6ff;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --success: #16a34a;
+            --success-light: #dcfce7;
+            --warning: #f59e0b;
+            --warning-light: #fff7ed;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.5; padding: 0;
+        }
+        .topbar {
+            background: var(--card); border-bottom: 2px solid var(--primary);
+            padding: 12px 24px; display: flex; align-items: center; gap: 16px;
+            box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100;
+        }
+        .topbar h1 { font-size: 1.3rem; color: var(--primary); white-space: nowrap; }
+        .topbar .spacer { flex: 1; }
+        .topbar-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .tab-bar {
+            display: flex; gap: 0; background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px; overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 12px 20px; border: none; background: none;
+            font-size: 0.9rem; font-weight: 600; color: var(--text-light);
+            cursor: pointer; border-bottom: 3px solid transparent;
+            white-space: nowrap; transition: all .2s;
+        }
+        .tab-btn:hover { color: var(--primary); background: var(--primary-lighter); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card {
+            background: var(--card); border-radius: 10px;
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem; margin-bottom: 16px;
+            padding-bottom: 8px; border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 8px;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+        .card h3 { font-size: 0.95rem; margin: 16px 0 8px; color: var(--primary); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .form-grid.cols-1 { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full { grid-column: 1 / -1; }
+        .form-group label {
+            font-size: 0.82rem; font-weight: 600; color: var(--text-light);
+            margin-bottom: 4px;
+        }
+        .form-group input, .form-group select, .form-group textarea {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 0.92rem; font-family: inherit; transition: border-color .2s;
+        }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+        .form-group textarea { resize: vertical; min-height: 80px; }
+        .btn {
+            padding: 8px 18px; border: none; border-radius: 6px;
+            font-size: 0.88rem; font-weight: 600; cursor: pointer;
+            transition: all .2s; display: inline-flex; align-items: center; gap: 6px;
+        }
+        .btn-sm { padding: 5px 12px; font-size: 0.82rem; }
+        .btn-primary { background: var(--primary); color: #fff; }
+        .btn-primary:hover { background: var(--primary-hover); }
+        .btn-success { background: var(--success); color: #fff; }
+        .btn-success:hover { background: #15803d; }
+        .btn-danger { background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .btn-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); }
+        .btn-outline:hover { background: var(--primary); color: #fff; }
+        .btn-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+        .item-card {
+            border: 1px solid var(--border); border-radius: 8px;
+            padding: 16px; margin-bottom: 12px; background: #fafbfc;
+            transition: box-shadow .2s; position: relative;
+        }
+        .item-card:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+        .item-header {
+            display: flex; justify-content: space-between; align-items: center;
+            margin-bottom: 12px;
+        }
+        .item-id {
+            font-weight: 700; color: var(--primary); font-size: 1rem;
+            background: var(--primary-light); padding: 2px 10px; border-radius: 4px;
+        }
+        .item-delete { color: var(--danger); cursor: pointer; font-size: 1.1rem; background: none; border: none; padding: 4px 8px; border-radius: 4px; }
+        .item-delete:hover { background: #fef2f2; }
+        .plr-badge, .sil-badge {
+            display: inline-block; padding: 2px 12px; border-radius: 4px;
+            font-weight: 700; font-size: 0.95rem; text-transform: uppercase;
+        }
+        .plr-a { background: #dcfce7; color: #166534; }
+        .plr-b { background: #d1fae5; color: #065f46; }
+        .plr-c { background: #fef9c3; color: #854d0e; }
+        .plr-d { background: #fed7aa; color: #9a3412; }
+        .plr-e { background: #fecaca; color: #991b1b; }
+        .sil-1 { background: #dcfce7; color: #166534; }
+        .sil-2 { background: #fef9c3; color: #854d0e; }
+        .sil-3 { background: #fecaca; color: #991b1b; }
+        .sil-om { background: #e2e8f0; color: #475569; }
+        .risk-graph-result {
+            padding: 10px 16px; border-radius: 6px; margin-top: 8px;
+            font-weight: 600; font-size: 0.9rem;
+            background: var(--primary-lighter); border: 1px solid var(--primary-light);
+        }
+        .summary-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+        .summary-table th, .summary-table td {
+            padding: 8px 12px; border: 1px solid var(--border); text-align: left;
+        }
+        .summary-table th { background: var(--primary-lighter); color: var(--primary); font-weight: 700; }
+        .summary-table tr:nth-child(even) td { background: #fafbfc; }
+        .summary-table tr:hover td { background: #f0f4ff; }
+        .checkbox-row { display: flex; gap: 16px; flex-wrap: wrap; padding: 8px 0; }
+        .checkbox-label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.88rem; cursor: pointer; user-select: none;
+        }
+        .checkbox-label input { width: 16px; height: 16px; accent-color: var(--primary); }
+        .toast {
+            position: fixed; bottom: 30px; right: 30px;
+            background: #1e293b; color: #fff; padding: 12px 24px;
+            border-radius: 8px; font-size: 0.9rem;
+            opacity: 0; transform: translateY(20px); transition: all .3s;
+            z-index: 1000; pointer-events: none;
+        }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .info-box {
+            background: var(--primary-lighter); border: 1px solid var(--primary-light);
+            border-radius: 6px; padding: 12px 16px; font-size: 0.85rem;
+            color: #1e40af; margin-bottom: 16px;
+        }
+        .info-box strong { display: block; margin-bottom: 4px; }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-light); }
+        .empty-state .empty-icon { font-size: 2.5rem; margin-bottom: 8px; }
+        .empty-state p { margin-bottom: 16px; }
+        .measure-list { list-style: none; padding: 0; margin: 0; }
+        .measure-row {
+            display: flex; gap: 8px; align-items: center; margin-bottom: 6px;
+        }
+        .measure-row input { flex: 1; }
+        .measure-row select { width: 160px; flex-shrink: 0; }
+        .measure-remove {
+            background: none; border: none; color: var(--danger); cursor: pointer;
+            font-size: 1rem; padding: 4px 6px; border-radius: 4px; flex-shrink: 0;
+        }
+        .measure-remove:hover { background: #fef2f2; }
+        .measure-add {
+            background: none; border: 1px dashed var(--border); border-radius: 6px;
+            padding: 6px 14px; color: var(--primary); cursor: pointer;
+            font-size: 0.82rem; font-weight: 600; transition: all .2s; margin-top: 4px;
+        }
+        .measure-add:hover { border-color: var(--primary); background: var(--primary-lighter); }
+        .pfactor-panel { background:#f0f9ff; border:1px solid #bae6fd; border-radius:8px; padding:14px 16px; margin-top:8px; }
+        .pfactor-panel h4 { margin:0 0 10px; font-size:0.88rem; color:#0369a1; }
+        .pfactor-grid { display:grid; grid-template-columns:1fr 120px; gap:6px 12px; align-items:center; font-size:0.84rem; }
+        .pfactor-grid label { color:var(--text); }
+        .pfactor-grid select { padding:5px 8px; border:1px solid var(--border); border-radius:5px; font-size:0.84rem; }
+        .pfactor-result { margin-top:10px; padding:8px 12px; border-radius:6px; font-weight:600; font-size:0.9rem; }
+        .pfactor-result.p1 { background:#dcfce7; color:#166534; border:1px solid #86efac; }
+        .pfactor-result.p2 { background:#fef9c3; color:#854d0e; border:1px solid #fde047; }
+        .pfactor-result.borderline { background:#fff7ed; color:#9a3412; border:1px solid #fdba74; }
+        .pfactor-override { margin-top:6px; font-size:0.82rem; display:flex; align-items:center; gap:8px; }
+        .section-num {
+            display: inline-block; background: var(--primary); color: #fff;
+            width: 22px; height: 22px; border-radius: 50%; text-align: center;
+            font-size: 0.75rem; line-height: 22px; font-weight: 700; margin-right: 4px;
+        }
+        @media (max-width: 700px) {
+            .form-grid, .form-grid.cols-3 { grid-template-columns: 1fr; }
+            .topbar { flex-wrap: wrap; }
+            .topbar h1 { font-size: 1rem; }
+            .tab-btn { padding: 10px 12px; font-size: 0.82rem; }
+            .container { padding: 12px; }
+        }
+        @media print {
+            @page { size: A4 portrait; margin: 18mm 16mm 20mm 16mm; }
+            body { background: #fff; padding: 0; font-size: 10pt; color: #000; line-height: 1.4; }
+            .topbar, .tab-bar, .btn-row, .btn, .item-delete,
+            .no-print, .toast, .empty-state { display: none !important; }
+            /* Only show summary tab */
+            .tab-content { display: none !important; }
+            #tab-summary { display: block !important; }
+            .card { box-shadow: none; border: none; padding: 0; margin-bottom: 0; background: #fff; border-radius: 0; }
+            .card h2 { display: none; }
+            .container { max-width: 100%; padding: 0; }
+            /* Print header */
+            .print-header {
+                display: flex !important; align-items: flex-start; justify-content: space-between;
+                border-bottom: 3px solid #2563eb; padding-bottom: 14px; margin-bottom: 18px;
+            }
+            .print-header-left h1 { font-size: 16pt; color: #2563eb; margin-bottom: 2px; }
+            .print-header-left p { font-size: 9pt; color: #64748b; }
+            .print-header-right { text-align: right; font-size: 8.5pt; color: #64748b; line-height: 1.6; }
+            .print-header-right strong { color: #1e293b; }
+            /* Section headings */
+            .print-section { page-break-inside: avoid; margin-bottom: 14px; }
+            .print-section h3, #summaryContent h3 {
+                font-size: 11pt; color: #2563eb; margin: 18px 0 6px;
+                padding: 4px 0; border-bottom: 1.5px solid #bfdbfe;
+                page-break-after: avoid;
+            }
+            #summaryContent h3:first-child { margin-top: 0; }
+            /* Tables */
+            .summary-table { page-break-inside: auto; font-size: 9pt; border-collapse: collapse; width: 100%; }
+            .summary-table th { background: #eff6ff !important; color: #1e40af !important; font-size: 8.5pt; padding: 5px 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .summary-table td { padding: 4px 8px; border: 1px solid #d1d5db; }
+            .summary-table tr { page-break-inside: avoid; }
+            .summary-table tr:nth-child(even) td { background: #f8fafc !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            /* Item detail cards */
+            .item-card { page-break-inside: avoid; border: 1px solid #d1d5db; border-radius: 4px; padding: 10px; margin-bottom: 10px; background: #fff !important; box-shadow: none; }
+            .item-card .item-header { margin-bottom: 6px; }
+            .item-id { font-size: 9.5pt; padding: 1px 8px; }
+            /* Badges */
+            .plr-badge, .sil-badge { font-size: 8.5pt; padding: 1px 8px; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            /* Footer */
+            .print-footer {
+                display: block !important; position: fixed; bottom: 0; left: 0; right: 0;
+                font-size: 7.5pt; color: #94a3b8; text-align: center;
+                border-top: 1px solid #e2e8f0; padding-top: 4px;
+            }
+        }
+        .print-header, .print-footer { display: none; }
+    </style>
+</head>
+<body>
+
+<!-- ══════ Top Bar ══════ -->
+<div class="topbar">
+    <h1>🛡️ SRS – Safety Requirements Specification</h1>
+    <span class="spacer"></span>
+    <div class="topbar-actions">
+        <button class="btn btn-sm btn-outline" onclick="saveJson()">💾 Save</button>
+        <button class="btn btn-sm btn-outline" onclick="triggerJsonLoad()">📂 Load</button>
+        <button class="btn btn-sm btn-success" onclick="printReport()">🖨️ Print / PDF</button>
+    </div>
+</div>
+<input type="file" id="jsonFileInput" accept=".json" hidden>
+
+<!-- ══════ Tabs ══════ -->
+<div class="tab-bar no-print">
+    <button class="tab-btn active" onclick="switchTab('project',this)">📋 Project</button>
+    <button class="tab-btn" onclick="switchTab('limits',this)">🔧 Limits</button>
+    <button class="tab-btn" onclick="switchTab('riskassess',this)" id="tabBtnRisk">⚠️ Risk Assessment</button>
+    <button class="tab-btn" onclick="switchTab('safetyfn',this)">🛡️ Safety Functions</button>
+    <button class="tab-btn" onclick="switchTab('conditions',this)">🌡️ Conditions</button>
+    <button class="tab-btn" onclick="switchTab('validation',this)">✅ Validation</button>
+    <button class="tab-btn" onclick="switchTab('summary',this)">📊 Summary</button>
+</div>
+
+<!-- ══════ Print header ══════ -->
+<div class="print-header">
+    <div class="print-header-left">
+        <h1>Safety Requirements Specification</h1>
+        <p id="printSubtitle"></p>
+    </div>
+    <div class="print-header-right" id="printHeaderRight"></div>
+</div>
+
+<!-- ══════ Print footer ══════ -->
+<div class="print-footer" id="printFooter"></div>
+
+<div class="container">
+
+<!-- ═══════════════════════════════════════ -->
+<!-- TAB 1 – Project Information            -->
+<!-- ═══════════════════════════════════════ -->
+<div id="tab-project" class="tab-content active">
+    <div class="card">
+        <h2><span class="icon">📋</span> Project Information</h2>
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="projName">Project Name / Document No.</label>
+                <input type="text" id="projName" placeholder="SRS-2026-001">
+            </div>
+            <div class="form-group">
+                <label for="projRevision">Revision</label>
+                <input type="text" id="projRevision" value="A" placeholder="A">
+            </div>
+            <div class="form-group">
+                <label for="projMachine">Machine / System</label>
+                <input type="text" id="projMachine" placeholder="e.g. Packaging Line 3">
+            </div>
+            <div class="form-group">
+                <label for="projMachineType">Machine Type / Model</label>
+                <input type="text" id="projMachineType" placeholder="e.g. ABC-3000">
+            </div>
+            <div class="form-group">
+                <label for="projManufacturer">Manufacturer</label>
+                <input type="text" id="projManufacturer" placeholder="">
+            </div>
+            <div class="form-group">
+                <label for="projSerialNo">Serial No. / Identification</label>
+                <input type="text" id="projSerialNo" placeholder="">
+            </div>
+            <div class="form-group">
+                <label for="projAuthor">Prepared by</label>
+                <input type="text" id="projAuthor" placeholder="">
+            </div>
+            <div class="form-group">
+                <label for="projApprover">Reviewed / Approved by</label>
+                <input type="text" id="projApprover" placeholder="">
+            </div>
+            <div class="form-group">
+                <label for="projDate">Date</label>
+                <input type="date" id="projDate">
+            </div>
+            <div class="form-group">
+                <label for="projStandard">Applied Standard</label>
+                <select id="projStandard">
+                    <option value="both">ISO 13849-1 &amp; IEC 62061</option>
+                    <option value="13849">ISO 13849-1</option>
+                    <option value="62061">IEC 62061</option>
+                </select>
+            </div>
+            <div class="form-group full">
+                <label for="projDescription">Machine / System Description</label>
+                <textarea id="projDescription" rows="4" placeholder="Brief description of machine function, intended use and relevant safety aspects..."></textarea>
+            </div>
+            <div class="form-group full">
+                <label for="projScope">Scope</label>
+                <textarea id="projScope" rows="3" placeholder="Which parts of the machine/system are covered by this SRS..."></textarea>
+            </div>
+            <div class="form-group full">
+                <label for="projNormRef">Normative References</label>
+                <textarea id="projNormRef" rows="3">ISO 12100:2010 – Safety of machinery – General principles for design
+ISO 13849-1:2023 – Safety-related parts of control systems
+IEC 62061:2021 – Functional safety of electrical control systems</textarea>
+            </div>
+        </div>
+        <div class="checkbox-row" style="margin-top:12px">
+            <label class="checkbox-label">
+                <input type="checkbox" id="optShowRisk" checked onchange="toggleRiskTab()">
+                Include Risk Assessment tab (ISO 12100)
+            </label>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- TAB 2 – Machine Limits (ISO 12100)     -->
+<!-- ═══════════════════════════════════════ -->
+<div id="tab-limits" class="tab-content">
+    <div class="card">
+        <h2><span class="icon">🔧</span> Machine Limits (ISO 12100)</h2>
+        <div class="info-box">
+            <strong>ISO 12100 – Step 1: Determination of machine limits</strong>
+            Define intended use, physical limits, time aspects and other boundaries that form the basis for risk assessment.
+        </div>
+        <div class="form-grid cols-1">
+            <div class="form-group">
+                <label for="limUse">Use limits (intended use &amp; reasonably foreseeable misuse)</label>
+                <textarea id="limUse" rows="4" placeholder="Describe intended use, operating modes, operator competence, foreseeable misuse..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="limSpace">Space limits (movement range, human-machine interaction)</label>
+                <textarea id="limSpace" rows="3" placeholder="Operator movement range, maintenance access, installation requirements..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="limTime">Time limits (lifetime, maintenance intervals)</label>
+                <textarea id="limTime" rows="3" placeholder="Expected lifetime, service intervals, replacement intervals for safety components..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="limEnv">Environmental limits</label>
+                <textarea id="limEnv" rows="3" placeholder="Temperature, humidity, dust, vibration, electromagnetic environment..."></textarea>
+            </div>
+            <div class="form-group">
+                <label for="limOther">Other limits</label>
+                <textarea id="limOther" rows="3" placeholder="Material properties, energy sources, ergonomics..."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- TAB 3 – Risk Assessment (optional)     -->
+<!-- ═══════════════════════════════════════ -->
+<div id="tab-riskassess" class="tab-content">
+    <div class="card">
+        <h2><span class="icon">⚠️</span> Risk Assessment (ISO 12100)</h2>
+        <div class="info-box">
+            <strong>ISO 12100 – Steps 2 &amp; 3: Hazard identification and risk estimation</strong>
+            Identify hazard sources, hazardous situations and possible harm.
+            Estimate risk level based on severity and probability.
+            The PLr / SIL CL determined here feeds into each Safety Function.
+        </div>
+        <div id="hazardList"></div>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="addHazard()">+ Add Hazard</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!-- TAB 4 – Safety Functions (Ch5 §1-3, 5-9)      -->
+<!-- ═══════════════════════════════════════════════ -->
+<div id="tab-safetyfn" class="tab-content">
+    <div class="card">
+        <h2><span class="icon">🛡️</span> Safety Functions (Chapter 5)</h2>
+        <div class="info-box">
+            <strong>Specification of Safety Functions</strong>
+            Each safety function shall include: functional behaviour, trigger conditions,
+            required PLr / SIL CL, response time, reset &amp; restart requirements,
+            fault reaction, diagnostic requirements, architecture, and interfaces.
+        </div>
+        <div id="sfList"></div>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="addSF()">+ Add Safety Function</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- TAB 5 – Operating Conditions (Ch5 §4)  -->
+<!-- ═══════════════════════════════════════ -->
+<div id="tab-conditions" class="tab-content">
+    <div class="card">
+        <h2><span class="icon">🌡️</span> <span class="section-num">4</span> Operating Conditions</h2>
+        <div class="info-box">
+            <strong>Chapter 5 §4 – Operating Conditions</strong>
+            Describe the environmental and operating conditions under which the safety-related control system must function correctly.
+            Important for component selection and validation.
+        </div>
+        <div class="form-grid cols-1">
+            <div class="form-group">
+                <label for="condTemp">Temperature range</label>
+                <input type="text" id="condTemp" placeholder="e.g. 0 °C to +50 °C">
+            </div>
+            <div class="form-group">
+                <label for="condHumidity">Humidity</label>
+                <input type="text" id="condHumidity" placeholder="e.g. 10–95 % RH, non-condensing">
+            </div>
+            <div class="form-group">
+                <label for="condDust">Dust / Particulates / IP rating</label>
+                <input type="text" id="condDust" placeholder="e.g. IP65 required, flour dust environment">
+            </div>
+            <div class="form-group">
+                <label for="condVibration">Vibration / Mechanical shock</label>
+                <input type="text" id="condVibration" placeholder="e.g. According to IEC 60068-2-6">
+            </div>
+            <div class="form-group">
+                <label for="condEMC">EMC / Electrical environment</label>
+                <input type="text" id="condEMC" placeholder="e.g. Industrial environment, EMC per IEC 61000-6-2">
+            </div>
+            <div class="form-group">
+                <label for="condSupply">Supply voltage</label>
+                <input type="text" id="condSupply" placeholder="e.g. 24 VDC ±10 %, 400 VAC ±10 %">
+            </div>
+            <div class="form-group">
+                <label for="condOther">Other conditions</label>
+                <textarea id="condOther" rows="3" placeholder="Altitude, chemical exposure, cleaning agents, radiation, etc."></textarea>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- TAB 6 – Validation (Ch5 §11)           -->
+<!-- ═══════════════════════════════════════ -->
+<div id="tab-validation" class="tab-content">
+    <div class="card">
+        <h2><span class="icon">✅</span> <span class="section-num">11</span> Validation Plan</h2>
+        <div class="info-box">
+            <strong>Chapter 5 §11 – Validation</strong>
+            Define how each safety requirement will be verified: by test, measurement, analysis, or review of documentation.
+        </div>
+        <div id="validationList"></div>
+        <div class="btn-row">
+            <button class="btn btn-primary" onclick="addValidation()">+ Add Validation Item</button>
+            <button class="btn btn-outline" onclick="autoPopulateValidation()">⚡ Auto-populate from Safety Functions</button>
+        </div>
+    </div>
+</div>
+
+<!-- ═══════════════════════════════════════ -->
+<!-- TAB 7 – Summary                        -->
+<!-- ═══════════════════════════════════════ -->
+<div id="tab-summary" class="tab-content">
+    <div class="card">
+        <h2><span class="icon">📊</span> Summary</h2>
+        <p style="color:var(--text-light);margin-bottom:16px;font-size:0.9rem;">
+            Overview of all identified hazards and corresponding safety functions.
+        </p>
+        <div class="btn-row" style="margin-bottom:20px">
+            <button class="btn btn-primary" onclick="generateSummary()">🔄 Refresh Summary</button>
+            <button class="btn btn-success" onclick="printReport()">🖨️ Print / Save as PDF</button>
+        </div>
+        <div id="summaryContent"></div>
+    </div>
+</div>
+
+</div><!-- /container -->
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════════════════════════════════════ -->
+<!--                  JAVASCRIPT                    -->
+<!-- ═══════════════════════════════════════════════ -->
+<script>
+// ==================== Data ====================
+var hazards = [];
+var safetyFunctions = [];
+var validations = [];
+var nextHazardId = 1;
+var nextSfId = 1;
+var nextValId = 1;
+
+// ==================== Tabs ====================
+function switchTab(id, btn) {
+    document.querySelectorAll('.tab-content').forEach(function(t) { t.classList.remove('active'); });
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.getElementById('tab-' + id).classList.add('active');
+    if (btn) btn.classList.add('active');
+}
+
+function toggleRiskTab() {
+    var show = document.getElementById('optShowRisk').checked;
+    document.getElementById('tabBtnRisk').style.display = show ? '' : 'none';
+    if (!show) {
+        var active = document.querySelector('.tab-btn.active');
+        if (active && active.id === 'tabBtnRisk') {
+            document.querySelector('.tab-btn').click();
+        }
+    }
+}
+
+// ==================== Helpers ====================
+function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+function escAttr(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;') : ''; }
+function optList(arr, sel) {
+    var h = '<option value="">– Select –</option>';
+    for (var i = 0; i < arr.length; i++) h += '<option value="'+escAttr(arr[i])+'"'+(arr[i]===sel?' selected':'')+'>'+esc(arr[i])+'</option>';
+    return h;
+}
+function showToast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg; t.classList.add('show');
+    setTimeout(function() { t.classList.remove('show'); }, 2500);
+}
+
+// ==================== PLr / SIL ====================
+function calcPfromFactors(pf1,pf2,pf3,pf4,pf5) {
+    var factors=[pf1,pf2,pf3,pf4,pf5];
+    if(factors.some(function(f){return !f;})) return {p:'',status:''};
+    var cCount=factors.filter(function(f){return f==='C';}).length;
+    var bCount=factors.filter(function(f){return f==='B';}).length;
+    if(cCount>=1) return {p:'P2',status:'p2'};
+    if(bCount>=3) return {p:'P2',status:'p2'};
+    if(bCount===2) return {p:'',status:'borderline'};
+    return {p:'P1',status:'p1'};
+}
+function calcPLr(s,f,p) {
+    if(!s||!f||!p) return '';
+    var map = { S1F1P1:'a',S1F1P2:'b',S1F2P1:'b',S1F2P2:'c',S2F1P1:'c',S2F1P2:'d',S2F2P1:'d',S2F2P2:'e' };
+    return map[s+f+p]||'';
+}
+function calcSIL(se,fr,pr,av) {
+    se=parseInt(se);fr=parseInt(fr);pr=parseInt(pr);av=parseInt(av);
+    if(isNaN(se)||isNaN(fr)||isNaN(pr)||isNaN(av)) return '';
+    if(se<=1) return 'OM';
+    var cl=fr+pr+av;
+    if(se===4){if(cl<=7) return 'SIL 2';if(cl<=13) return 'SIL 3';return 'SIL 3';}
+    if(se===3){if(cl<=5) return 'OM';if(cl<=7) return 'SIL 1';if(cl<=10) return 'SIL 2';return 'SIL 3';}
+    if(se===2){if(cl<=7) return 'OM';if(cl<=10) return 'SIL 1';if(cl<=13) return 'SIL 2';return 'SIL 3';}
+    return 'OM';
+}
+
+// ==================== Hazard types ====================
+var hazardTypes = [
+    'Mechanical – crushing','Mechanical – cutting','Mechanical – impact',
+    'Mechanical – entanglement','Mechanical – ejection of parts',
+    'Mechanical – fall / trip','Mechanical – other',
+    'Electrical – direct contact','Electrical – indirect contact',
+    'Electrical – electrostatic','Thermal – burn (hot)',
+    'Thermal – burn (cold)','Noise','Vibration',
+    'Radiation – optical','Radiation – electromagnetic','Radiation – ionising',
+    'Material/substance – contact','Material/substance – inhalation',
+    'Ergonomic – posture','Ergonomic – repetitive work',
+    'Pressurised medium – hydraulic','Pressurised medium – pneumatic',
+    'Gravity-related','Other'
+];
+var lifecyclePhases = [
+    'Transport','Installation/Assembly','Commissioning',
+    'Normal operation','Set-up / Changeover','Cleaning',
+    'Maintenance','Troubleshooting','Decommissioning'
+];
+
+// ==================== HAZARDS ====================
+function addHazard(data) {
+    var h = data || {
+        id:'H'+nextHazardId, zone:'', type:'', description:'', lifecycle:'',
+        severity:'', frequency:'', probability:'',
+        pf1:'', pf2:'', pf3:'', pf4:'', pf5:'',
+        se:'', fr:'', pr:'', av:'',
+        measures:[], residualRisk:''
+    };
+    if(!data) nextHazardId++;
+    hazards.push(h);
+    renderHazards();
+}
+function removeHazard(idx) { collectHazardData(); hazards.splice(idx,1); renderHazards(); showToast('Hazard removed'); }
+function collectHazardData() {
+    document.querySelectorAll('.hazard-item').forEach(function(el,idx) {
+        if(!hazards[idx]) return;
+        var fields = ['zone','type','description','lifecycle','severity','frequency','probability','pf1','pf2','pf3','pf4','pf5','se','fr','pr','av','residualRisk'];
+        fields.forEach(function(f){ var e=el.querySelector('[data-field="'+f+'"]:not([style*="display:none"])'); if(!e) e=el.querySelector('[data-field="'+f+'"]'); if(e) hazards[idx][f]=e.value; });
+        // Auto-set probability from P-factors (Annex A)
+        var pRes=calcPfromFactors(hazards[idx].pf1,hazards[idx].pf2,hazards[idx].pf3,hazards[idx].pf4,hazards[idx].pf5);
+        if(pRes.p) hazards[idx].probability=pRes.p;
+        // Collect measures
+        var measures = [];
+        el.querySelectorAll('.measure-row').forEach(function(mr){
+            var desc = mr.querySelector('[data-mfield="desc"]');
+            var cat = mr.querySelector('[data-mfield="cat"]');
+            if(desc && desc.value.trim()) measures.push({ desc: desc.value, cat: cat ? cat.value : '' });
+        });
+        hazards[idx].measures = measures;
+    });
+}
+function renderHazards() {
+    var c = document.getElementById('hazardList');
+    if(!hazards.length){ c.innerHTML='<div class="empty-state"><div class="empty-icon">⚠️</div><p>No hazards added yet.</p></div>'; return; }
+    var std = document.getElementById('projStandard').value;
+    var html='';
+    for(var i=0;i<hazards.length;i++){
+        var h=hazards[i];
+        var plr=calcPLr(h.severity,h.frequency,h.probability);
+        var sil=calcSIL(h.se,h.fr,h.pr,h.av);
+        html+='<div class="item-card hazard-item"><div class="item-header"><span class="item-id">'+esc(h.id)+'</span><button class="item-delete" onclick="collectHazardData();removeHazard('+i+')" title="Remove">🗑️</button></div>';
+        html+='<div class="form-grid"><div class="form-group"><label>Hazard zone / Location</label><input type="text" data-field="zone" value="'+escAttr(h.zone)+'" placeholder="e.g. Infeed area"></div>';
+        html+='<div class="form-group"><label>Hazard type</label><select data-field="type">'+optList(hazardTypes,h.type)+'</select></div>';
+        html+='<div class="form-group"><label>Lifecycle phase</label><select data-field="lifecycle">'+optList(lifecyclePhases,h.lifecycle)+'</select></div>';
+        html+='<div class="form-group"><label>Description of hazard / hazardous event</label><input type="text" data-field="description" value="'+escAttr(h.description)+'" placeholder="Describe the hazardous situation..."></div></div>';
+
+        if(std==='13849'||std==='both'){
+            html+='<h3>Risk Graph – ISO 13849-1 (PLr determination)</h3><div class="form-grid cols-2">';
+            html+='<div class="form-group"><label>S – Severity of injury</label><select data-field="severity" onchange="collectHazardData();renderHazards()"><option value="">– Select –</option><option value="S1"'+(h.severity==='S1'?' selected':'')+'>S1 – Slight (reversible)</option><option value="S2"'+(h.severity==='S2'?' selected':'')+'>S2 – Serious (irreversible/death)</option></select></div>';
+            html+='<div class="form-group"><label>F – Frequency / Exposure</label><select data-field="frequency" onchange="collectHazardData();renderHazards()"><option value="">– Select –</option><option value="F1"'+(h.frequency==='F1'?' selected':'')+'>F1 – Seldom to sometimes</option><option value="F2"'+(h.frequency==='F2'?' selected':'')+'>F2 – Frequent to continuous</option></select></div></div>';
+            // Annex A P-factor panel (EN 13849-1:2023)
+            var pCalc=calcPfromFactors(h.pf1,h.pf2,h.pf3,h.pf4,h.pf5);
+            html+='<div class="pfactor-panel"><h4>Annex A – Determination of parameter P (EN 13849-1:2023)</h4>';
+            html+='<div class="pfactor-grid">';
+            html+='<label>1. Personnel – Use of machine by</label>';
+            html+='<select data-field="pf1" onchange="collectHazardData();renderHazards()"><option value="">–</option><option value="A"'+(h.pf1==='A'?' selected':'')+'>A – Skilled</option><option value="B"'+(h.pf1==='B'?' selected':'')+'>B – Unskilled</option></select>';
+            html+='<label>2. Speed of hazardous part</label>';
+            html+='<select data-field="pf2" onchange="collectHazardData();renderHazards()"><option value="">–</option><option value="A"'+(h.pf2==='A'?' selected':'')+'>A – Low (&lt;250 mm/s)</option><option value="B"'+(h.pf2==='B'?' selected':'')+'>B – Medium (250–1000)</option><option value="C"'+(h.pf2==='C'?' selected':'')+'>C – High (&gt;1000 mm/s)</option></select>';
+            html+='<label>3. Ergonomics / spatial conditions</label>';
+            html+='<select data-field="pf3" onchange="collectHazardData();renderHazards()"><option value="">–</option><option value="A"'+(h.pf3==='A'?' selected':'')+'>A – Easy to avoid</option><option value="B"'+(h.pf3==='B'?' selected':'')+'>B – Difficult</option><option value="C"'+(h.pf3==='C'?' selected':'')+'>C – Almost impossible</option></select>';
+            html+='<label>4. Environmental conditions / perception</label>';
+            html+='<select data-field="pf4" onchange="collectHazardData();renderHazards()"><option value="">–</option><option value="A"'+(h.pf4==='A'?' selected':'')+'>A – Good perception</option><option value="B"'+(h.pf4==='B'?' selected':'')+'>B – Partially hidden</option><option value="C"'+(h.pf4==='C'?' selected':'')+'>C – Significantly hidden</option></select>';
+            html+='<label>5. Complexity of operations</label>';
+            html+='<select data-field="pf5" onchange="collectHazardData();renderHazards()"><option value="">–</option><option value="A"'+(h.pf5==='A'?' selected':'')+'>A – Low / none</option><option value="B"'+(h.pf5==='B'?' selected':'')+'>B – Medium to high</option><option value="C"'+(h.pf5==='C'?' selected':'')+'>C – Very high</option></select>';
+            html+='</div>';
+            if(pCalc.status==='p1') html+='<div class="pfactor-result p1">Result: P1 – Possible to avoid</div>';
+            else if(pCalc.status==='p2') html+='<div class="pfactor-result p2">Result: P2 – Hardly possible to avoid</div>';
+            else if(pCalc.status==='borderline'){
+                html+='<div class="pfactor-result borderline">Borderline (2×B, rest A) – Select P manually:</div>';
+                html+='<div class="pfactor-override"><select data-field="probability" onchange="collectHazardData();renderHazards()"><option value="">– Select –</option><option value="P1"'+(h.probability==='P1'?' selected':'')+'>P1</option><option value="P2"'+(h.probability==='P2'?' selected':'')+'>P2</option></select></div>';
+            }
+            html+='</div>';
+            if(plr) html+='<div class="risk-graph-result">Required Performance Level: <span class="plr-badge plr-'+plr+'">PLr '+plr+'</span></div>';
+        }
+        if(std==='62061'||std==='both'){
+            html+='<h3>SIL determination – IEC 62061</h3><div class="form-grid cols-3">';
+            html+='<div class="form-group"><label>Se – Severity</label><select data-field="se" onchange="collectHazardData();renderHazards()"><option value="">– Select –</option><option value="4"'+(h.se==='4'||h.se===4?' selected':'')+'>4 – Death / loss of eye or arm</option><option value="3"'+(h.se==='3'||h.se===3?' selected':'')+'>3 – Permanent injury</option><option value="2"'+(h.se==='2'||h.se===2?' selected':'')+'>2 – Reversible, medical treatment</option><option value="1"'+(h.se==='1'||h.se===1?' selected':'')+'>1 – Reversible, first aid</option></select></div>';
+            html+='<div class="form-group"><label>Fr – Exposure frequency</label><select data-field="fr" onchange="collectHazardData();renderHazards()"><option value="">– Select –</option><option value="5"'+(h.fr==='5'||h.fr===5?' selected':'')+'>5 – ≥ 1/h</option><option value="4"'+(h.fr==='4'||h.fr===4?' selected':'')+'>4 – ≥ 1/day to &lt; 1/h</option><option value="3"'+(h.fr==='3'||h.fr===3?' selected':'')+'>3 – ≥ 1/2 weeks to &lt; 1/day</option><option value="2"'+(h.fr==='2'||h.fr===2?' selected':'')+'>2 – ≥ 1/year to &lt; 1/2 weeks</option><option value="1"'+(h.fr==='1'||h.fr===1?' selected':'')+'>1 – &lt; 1/year</option></select></div>';
+            html+='<div class="form-group"><label>Pr – Probability of harm</label><select data-field="pr" onchange="collectHazardData();renderHazards()"><option value="">– Select –</option><option value="5"'+(h.pr==='5'||h.pr===5?' selected':'')+'>5 – Very high</option><option value="4"'+(h.pr==='4'||h.pr===4?' selected':'')+'>4 – Likely</option><option value="3"'+(h.pr==='3'||h.pr===3?' selected':'')+'>3 – Possible</option><option value="2"'+(h.pr==='2'||h.pr===2?' selected':'')+'>2 – Seldom</option><option value="1"'+(h.pr==='1'||h.pr===1?' selected':'')+'>1 – Negligible</option></select></div></div>';
+            html+='<div class="form-grid cols-3" style="margin-top:4px"><div class="form-group"><label>Av – Avoidance</label><select data-field="av" onchange="collectHazardData();renderHazards()"><option value="">– Select –</option><option value="5"'+(h.av==='5'||h.av===5?' selected':'')+'>5 – Impossible</option><option value="3"'+(h.av==='3'||h.av===3?' selected':'')+'>3 – Possible</option><option value="1"'+(h.av==='1'||h.av===1?' selected':'')+'>1 – Likely</option></select></div></div>';
+            if(sil){
+                var sc=sil==='OM'?'sil-badge sil-om':'sil-badge sil-'+sil.charAt(4);
+                html+='<div class="risk-graph-result">Required SIL CL: <span class="'+sc+'">'+sil+'</span>'+(sil==='OM'?' (Other Measures sufficient)':'')+'</div>';
+            }
+        }
+        // Measures list
+        var mArr = Array.isArray(h.measures) ? h.measures : [];
+        html+='<div style="margin-top:12px"><label style="font-size:0.82rem;font-weight:600;color:var(--text-light);margin-bottom:6px;display:block">Protective measures</label>';
+        html+='<div class="measure-list" data-hazard="'+i+'">';
+        for(var m=0;m<mArr.length;m++){
+            html+='<div class="measure-row">';
+            html+='<select data-mfield="cat" style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.88rem">';
+            html+=measureCatOptions(mArr[m].cat);
+            html+='</select>';
+            html+='<input type="text" data-mfield="desc" value="'+escAttr(mArr[m].desc)+'" placeholder="Describe measure..." style="padding:7px 10px;border:1px solid var(--border);border-radius:6px;font-size:0.88rem">';
+            html+='<button class="measure-remove" onclick="collectHazardData();removeMeasure('+i+','+m+')" title="Remove">✕</button></div>';
+        }
+        html+='</div>';
+        html+='<button class="measure-add" onclick="collectHazardData();addMeasure('+i+')">+ Add measure</button></div>';
+        html+='<div class="form-grid cols-1" style="margin-top:10px"><div class="form-group"><label>Residual risk / comments</label><input type="text" data-field="residualRisk" value="'+escAttr(h.residualRisk)+'" placeholder="Assessment of remaining risk..."></div></div></div>';
+    }
+    c.innerHTML=html;
+}
+
+var measureCategories = ['Design measure','Guard / barrier','Safety device','PPE','Information / warning','Organisational','Other'];
+
+function measureCatOptions(sel) {
+    var h = '';
+    for(var i=0;i<measureCategories.length;i++){
+        h+='<option value="'+escAttr(measureCategories[i])+'"'+(measureCategories[i]===sel?' selected':'')+'>'+esc(measureCategories[i])+'</option>';
+    }
+    return h;
+}
+
+function addMeasure(hazardIdx) {
+    if(!hazards[hazardIdx].measures) hazards[hazardIdx].measures = [];
+    hazards[hazardIdx].measures.push({ desc:'', cat:'Safety device' });
+    renderHazards();
+}
+
+function removeMeasure(hazardIdx, measureIdx) {
+    hazards[hazardIdx].measures.splice(measureIdx, 1);
+    renderHazards();
+}
+
+// ==================== SAFETY FUNCTIONS ====================
+function addSF(data) {
+    var sf = data || {
+        id:'SF'+nextSfId, name:'', relatedHazards:'',
+        // §1 functional description
+        description:'', trigger:'', safeState:'', behaviourOnFault:'',
+        // §3 PLr / SIL
+        plr:'', silcl:'', category:'',
+        // §5 response time
+        responseTime:'', maxStopTime:'',
+        // §6 reset & restart
+        resetType:'manual', restartConditions:'', autoRestartAllowed: false,
+        // §7 fault reaction
+        faultReaction:'',
+        // §8 diagnostics
+        diagnosticCoverage:'', faultsToDetect:'', detectionTime:'',
+        // §9 architecture
+        channels:'', redundancy: false, monitoring:'',
+        // §10 interfaces
+        interfaceOperator:'', interfaceMachines:'', interfaceControl:'',
+        // components
+        inputDevices:'', logicUnit:'', outputDevices:'',
+        operatingMode:'',
+        muting: false, bypass: false, mutingConditions:'', bypassConditions:'',
+        testInterval:'', notes:''
+    };
+    if(!data) nextSfId++;
+    safetyFunctions.push(sf);
+    renderSF();
+}
+function removeSF(idx){ collectSfData(); safetyFunctions.splice(idx,1); renderSF(); showToast('Safety function removed'); }
+
+function collectSfData(){
+    document.querySelectorAll('.sf-item').forEach(function(el,idx){
+        if(!safetyFunctions[idx]) return;
+        var sf=safetyFunctions[idx];
+        var fields=['name','relatedHazards','description','trigger','safeState','behaviourOnFault',
+            'plr','silcl','category','responseTime','maxStopTime',
+            'resetType','restartConditions',
+            'faultReaction','diagnosticCoverage','faultsToDetect','detectionTime',
+            'channels','monitoring',
+            'interfaceOperator','interfaceMachines','interfaceControl',
+            'inputDevices','logicUnit','outputDevices','operatingMode',
+            'mutingConditions','bypassConditions','testInterval','notes'];
+        fields.forEach(function(f){
+            var e=el.querySelector('[data-field="'+f+'"]');
+            if(e) sf[f]=e.value;
+        });
+        var checks=['muting','bypass','autoRestartAllowed','redundancy'];
+        checks.forEach(function(f){
+            var e=el.querySelector('[data-field="'+f+'"]');
+            if(e) sf[f]=e.checked;
+        });
+    });
+}
+
+function renderSF(){
+    var c=document.getElementById('sfList');
+    if(!safetyFunctions.length){ c.innerHTML='<div class="empty-state"><div class="empty-icon">🛡️</div><p>No safety functions added yet.</p></div>'; return; }
+    var std=document.getElementById('projStandard').value;
+    var html='';
+    for(var i=0;i<safetyFunctions.length;i++){
+        var sf=safetyFunctions[i];
+        html+='<div class="item-card sf-item"><div class="item-header"><span class="item-id">'+esc(sf.id)+'</span><button class="item-delete" onclick="collectSfData();removeSF('+i+')" title="Remove">🗑️</button></div>';
+
+        // §1 Safety function identity & §2 functional behaviour
+        html+='<h3><span class="section-num">1</span> Safety Function &amp; <span class="section-num">2</span> Functional Behaviour</h3>';
+        html+='<div class="form-grid"><div class="form-group"><label>Name</label><input type="text" data-field="name" value="'+escAttr(sf.name)+'" placeholder="e.g. Emergency stop Line 3"></div>';
+        html+='<div class="form-group"><label>Related hazards</label><input type="text" data-field="relatedHazards" value="'+escAttr(sf.relatedHazards)+'" placeholder="e.g. H1, H3"></div>';
+        html+='<div class="form-group full"><label>Description – what does the function do?</label><textarea data-field="description" rows="2" placeholder="Describe the safety function and which risk it reduces...">'+esc(sf.description)+'</textarea></div>';
+        html+='<div class="form-group"><label>Trigger condition</label><input type="text" data-field="trigger" value="'+escAttr(sf.trigger)+'" placeholder="e.g. E-stop button pressed, light curtain interrupted"></div>';
+        html+='<div class="form-group"><label>Safe state (action taken)</label><input type="text" data-field="safeState" value="'+escAttr(sf.safeState)+'" placeholder="e.g. All motion stopped, energy disconnected"></div>';
+        html+='<div class="form-group full"><label>Behaviour on fault (how system acts if a fault occurs)</label><input type="text" data-field="behaviourOnFault" value="'+escAttr(sf.behaviourOnFault)+'" placeholder="e.g. System transitions to safe state, start prevented"></div></div>';
+
+        // §3 Performance requirements
+        html+='<h3><span class="section-num">3</span> Performance Requirements (PLr / SIL CL)</h3><div class="form-grid cols-3">';
+        if(std==='13849'||std==='both'){
+            html+='<div class="form-group"><label>Required PLr (ISO 13849-1)</label><select data-field="plr"><option value="">– Select –</option>';
+            ['a','b','c','d','e'].forEach(function(v){ html+='<option value="'+v+'"'+(sf.plr===v?' selected':'')+'>PLr '+v+'</option>'; });
+            html+='</select></div>';
+        } else { html+='<input type="hidden" data-field="plr" value="">'; }
+        if(std==='62061'||std==='both'){
+            html+='<div class="form-group"><label>Required SIL CL (IEC 62061)</label><select data-field="silcl"><option value="">– Select –</option>';
+            ['SIL 1','SIL 2','SIL 3'].forEach(function(v){ html+='<option value="'+v+'"'+(sf.silcl===v?' selected':'')+'>'+v+'</option>'; });
+            html+='</select></div>';
+        } else { html+='<input type="hidden" data-field="silcl" value="">'; }
+        html+='<div class="form-group"><label>Category (ISO 13849-1)</label><select data-field="category"><option value="">– Select –</option>';
+        ['B','1','2','3','4'].forEach(function(v){ html+='<option value="'+v+'"'+(sf.category===v?' selected':'')+'>'+(v==='B'?'Cat B':'Cat '+v)+'</option>'; });
+        html+='</select></div></div>';
+
+        // §5 Response time / stop time
+        html+='<h3><span class="section-num">5</span> Response Time / Stop Time</h3><div class="form-grid">';
+        html+='<div class="form-group"><label>System response time (requirement)</label><input type="text" data-field="responseTime" value="'+escAttr(sf.responseTime)+'" placeholder="e.g. < 50 ms"></div>';
+        html+='<div class="form-group"><label>Maximum allowed total stop time</label><input type="text" data-field="maxStopTime" value="'+escAttr(sf.maxStopTime)+'" placeholder="e.g. ≤ 300 ms"></div></div>';
+
+        // §6 Reset & restart
+        html+='<h3><span class="section-num">6</span> Reset &amp; Restart</h3><div class="form-grid">';
+        html+='<div class="form-group"><label>Reset type</label><select data-field="resetType"><option value="manual"'+(sf.resetType==='manual'?' selected':'')+'>Manual reset</option><option value="monitored"'+(sf.resetType==='monitored'?' selected':'')+'>Monitored manual reset</option><option value="automatic"'+(sf.resetType==='automatic'?' selected':'')+'>Automatic reset</option></select></div>';
+        html+='<div class="form-group"><label>Restart conditions</label><input type="text" data-field="restartConditions" value="'+escAttr(sf.restartConditions)+'" placeholder="e.g. Guard closed AND reset button pressed"></div></div>';
+        html+='<div class="checkbox-row"><label class="checkbox-label"><input type="checkbox" data-field="autoRestartAllowed"'+(sf.autoRestartAllowed?' checked':'')+'>Automatic restart allowed</label></div>';
+
+        // §7 Fault reaction
+        html+='<h3><span class="section-num">7</span> Fault Reaction</h3><div class="form-grid cols-1">';
+        html+='<div class="form-group"><label>Fault reaction behaviour</label><textarea data-field="faultReaction" rows="2" placeholder="e.g. Safe shutdown, alarm activated, start prevented until fault cleared">'+esc(sf.faultReaction)+'</textarea></div></div>';
+
+        // §8 Diagnostic requirements
+        html+='<h3><span class="section-num">8</span> Diagnostic Requirements</h3><div class="form-grid">';
+        html+='<div class="form-group"><label>Diagnostic coverage (DC)</label><input type="text" data-field="diagnosticCoverage" value="'+escAttr(sf.diagnosticCoverage)+'" placeholder="e.g. DC ≥ 99% (high)"></div>';
+        html+='<div class="form-group"><label>Detection time</label><input type="text" data-field="detectionTime" value="'+escAttr(sf.detectionTime)+'" placeholder="e.g. Within 1 cycle"></div>';
+        html+='<div class="form-group full"><label>Faults to be detected</label><textarea data-field="faultsToDetect" rows="2" placeholder="e.g. Short circuit in safety circuit, wire break, contactor welding, cross-connection...">'+esc(sf.faultsToDetect)+'</textarea></div></div>';
+
+        // §9 Architecture / structural requirements
+        html+='<h3><span class="section-num">9</span> Architecture / Structural Requirements</h3><div class="form-grid">';
+        html+='<div class="form-group"><label>Channel structure</label><select data-field="channels"><option value="">– Select –</option><option value="single"'+(sf.channels==='single'?' selected':'')+'>Single-channel</option><option value="dual"'+(sf.channels==='dual'?' selected':'')+'>Dual-channel</option></select></div>';
+        html+='<div class="form-group"><label>Monitoring method</label><input type="text" data-field="monitoring" value="'+escAttr(sf.monitoring)+'" placeholder="e.g. Cross-monitoring of contactors, EDM"></div></div>';
+        html+='<div class="checkbox-row"><label class="checkbox-label"><input type="checkbox" data-field="redundancy"'+(sf.redundancy?' checked':'')+'>Redundancy required</label></div>';
+
+        // Components
+        html+='<h3>Components (Input – Logic – Output)</h3><div class="form-grid cols-3">';
+        html+='<div class="form-group"><label>Input devices (sensors, switches)</label><textarea data-field="inputDevices" rows="2" placeholder="e.g. 2× E-stop, light curtain...">'+esc(sf.inputDevices)+'</textarea></div>';
+        html+='<div class="form-group"><label>Logic (controller)</label><textarea data-field="logicUnit" rows="2" placeholder="e.g. Safety PLC, safety relay...">'+esc(sf.logicUnit)+'</textarea></div>';
+        html+='<div class="form-group"><label>Output devices (actuators)</label><textarea data-field="outputDevices" rows="2" placeholder="e.g. 2× contactors, valve...">'+esc(sf.outputDevices)+'</textarea></div></div>';
+
+        // §10 Interfaces
+        html+='<h3><span class="section-num">10</span> Interfaces</h3><div class="form-grid cols-3">';
+        html+='<div class="form-group"><label>Operator interface</label><input type="text" data-field="interfaceOperator" value="'+escAttr(sf.interfaceOperator)+'" placeholder="e.g. HMI indication, reset button"></div>';
+        html+='<div class="form-group"><label>Other machines</label><input type="text" data-field="interfaceMachines" value="'+escAttr(sf.interfaceMachines)+'" placeholder="e.g. Upstream conveyor interlock"></div>';
+        html+='<div class="form-group"><label>Control system</label><input type="text" data-field="interfaceControl" value="'+escAttr(sf.interfaceControl)+'" placeholder="e.g. Safe I/O link to main PLC"></div></div>';
+
+        // Additional
+        html+='<h3>Additional</h3><div class="form-grid">';
+        html+='<div class="form-group"><label>Operating mode affected</label><select data-field="operatingMode"><option value="">– Select –</option>';
+        ['All modes','Automatic','Manual','Set-up','Maintenance'].forEach(function(v){ html+='<option value="'+v+'"'+(sf.operatingMode===v?' selected':'')+'>'+v+'</option>'; });
+        html+='</select></div>';
+        html+='<div class="form-group"><label>Test / proof-test interval</label><input type="text" data-field="testInterval" value="'+escAttr(sf.testInterval)+'" placeholder="e.g. Functional test every 6 months"></div></div>';
+
+        html+='<div class="checkbox-row"><label class="checkbox-label"><input type="checkbox" data-field="muting"'+(sf.muting?' checked':'')+'>Muting required</label>';
+        html+='<label class="checkbox-label"><input type="checkbox" data-field="bypass"'+(sf.bypass?' checked':'')+'>Bypass / Override required</label></div>';
+
+        // Muting / bypass conditions (shown always, filled if needed)
+        html+='<div class="form-grid">';
+        html+='<div class="form-group"><label>Muting conditions (if applicable)</label><input type="text" data-field="mutingConditions" value="'+escAttr(sf.mutingConditions)+'" placeholder="e.g. Only when product detected by sensor S1 AND S2"></div>';
+        html+='<div class="form-group"><label>Bypass conditions (if applicable)</label><input type="text" data-field="bypassConditions" value="'+escAttr(sf.bypassConditions)+'" placeholder="e.g. Key-operated, time-limited, logged"></div></div>';
+
+        html+='<div class="form-grid cols-1" style="margin-top:8px"><div class="form-group"><label>Additional notes / requirements</label><textarea data-field="notes" rows="2" placeholder="Further requirements, references...">'+esc(sf.notes)+'</textarea></div></div>';
+        html+='</div>'; // /item-card
+    }
+    c.innerHTML=html;
+}
+
+// ==================== VALIDATION ====================
+function addValidation(data){
+    var v = data || {
+        id:'V'+nextValId, sfRef:'', requirement:'', method:'', acceptanceCriteria:'', responsible:'', status:'', comments:''
+    };
+    if(!data) nextValId++;
+    validations.push(v);
+    renderValidations();
+}
+function removeValidation(idx){ collectValData(); validations.splice(idx,1); renderValidations(); showToast('Validation item removed'); }
+function collectValData(){
+    document.querySelectorAll('.val-item').forEach(function(el,idx){
+        if(!validations[idx]) return;
+        var fields=['sfRef','requirement','method','acceptanceCriteria','responsible','status','comments'];
+        fields.forEach(function(f){ var e=el.querySelector('[data-field="'+f+'"]'); if(e) validations[idx][f]=e.value; });
+    });
+}
+function renderValidations(){
+    var c=document.getElementById('validationList');
+    if(!validations.length){ c.innerHTML='<div class="empty-state"><div class="empty-icon">✅</div><p>No validation items added yet.</p></div>'; return; }
+    var valMethods=['Test','Measurement','Analysis / Calculation','Review of documentation','Inspection','Simulation'];
+    var statuses=['Not started','In progress','Passed','Failed','N/A'];
+    var html='';
+    for(var i=0;i<validations.length;i++){
+        var v=validations[i];
+        html+='<div class="item-card val-item"><div class="item-header"><span class="item-id">'+esc(v.id)+'</span><button class="item-delete" onclick="collectValData();removeValidation('+i+')" title="Remove">🗑️</button></div>';
+        html+='<div class="form-grid"><div class="form-group"><label>Related Safety Function</label><input type="text" data-field="sfRef" value="'+escAttr(v.sfRef)+'" placeholder="e.g. SF1, SF2"></div>';
+        html+='<div class="form-group"><label>Verification method</label><select data-field="method">'+optList(valMethods,v.method)+'</select></div>';
+        html+='<div class="form-group full"><label>Requirement to verify</label><input type="text" data-field="requirement" value="'+escAttr(v.requirement)+'" placeholder="e.g. Response time ≤ 300 ms"></div>';
+        html+='<div class="form-group full"><label>Acceptance criteria</label><input type="text" data-field="acceptanceCriteria" value="'+escAttr(v.acceptanceCriteria)+'" placeholder="e.g. Measured stop time < 250 ms in 5 consecutive tests"></div>';
+        html+='<div class="form-group"><label>Responsible</label><input type="text" data-field="responsible" value="'+escAttr(v.responsible)+'"></div>';
+        html+='<div class="form-group"><label>Status</label><select data-field="status">'+optList(statuses,v.status)+'</select></div>';
+        html+='<div class="form-group full"><label>Comments / result</label><input type="text" data-field="comments" value="'+escAttr(v.comments)+'"></div></div></div>';
+    }
+    c.innerHTML=html;
+}
+function autoPopulateValidation(){
+    collectSfData();
+    if(!safetyFunctions.length){ showToast('⚠️ No safety functions to reference'); return; }
+    collectValData();
+    for(var i=0;i<safetyFunctions.length;i++){
+        var sf=safetyFunctions[i];
+        // Response time
+        if(sf.responseTime||sf.maxStopTime){
+            addValidation({id:'V'+nextValId++, sfRef:sf.id, requirement:'Response/stop time: '+(sf.maxStopTime||sf.responseTime), method:'Measurement', acceptanceCriteria:'Measured time within specified limit', responsible:'', status:'Not started', comments:''});
+        }
+        // PLr/SIL verification
+        var perfReq = sf.plr ? 'PLr '+sf.plr : (sf.silcl||'');
+        if(perfReq){
+            addValidation({id:'V'+nextValId++, sfRef:sf.id, requirement:'Performance level: '+perfReq, method:'Analysis / Calculation', acceptanceCriteria:'Achieved PL/SIL meets or exceeds requirement', responsible:'', status:'Not started', comments:''});
+        }
+        // Functional test
+        addValidation({id:'V'+nextValId++, sfRef:sf.id, requirement:'Functional test of '+esc(sf.name||sf.id), method:'Test', acceptanceCriteria:'Function operates correctly per specification', responsible:'', status:'Not started', comments:''});
+    }
+    renderValidations();
+    showToast('✅ Validation items auto-populated');
+}
+
+// ==================== SUMMARY ====================
+function generateSummary(){
+    collectHazardData(); collectSfData(); collectValData();
+    var std=document.getElementById('projStandard').value;
+    var html='';
+
+    // Project overview
+    html+='<div class="print-section"><h3 style="margin-top:0">Project Overview</h3><table class="summary-table">';
+    html+='<tr><th style="width:200px">Field</th><th>Value</th></tr>';
+    var pf=[['Project Name','projName'],['Machine / System','projMachine'],['Manufacturer','projManufacturer'],['Revision','projRevision'],['Date','projDate'],['Prepared by','projAuthor'],['Reviewed by','projApprover'],['Standard','projStandard']];
+    pf.forEach(function(p){ var v=document.getElementById(p[1]); html+='<tr><td>'+p[0]+'</td><td>'+esc(p[1]==='projStandard'?v.selectedOptions[0].text:(v.value||'–'))+'</td></tr>'; });
+    html+='</table></div>';
+
+    // Operating conditions
+    var condFields=[['Temperature','condTemp'],['Humidity','condHumidity'],['Dust / IP','condDust'],['Vibration','condVibration'],['EMC','condEMC'],['Supply voltage','condSupply'],['Other','condOther']];
+    var hasConditions = condFields.some(function(c){ return document.getElementById(c[1]).value.trim(); });
+    if(hasConditions){
+        html+='<div class="print-section"><h3>Operating Conditions</h3><table class="summary-table"><tr><th style="width:200px">Parameter</th><th>Value</th></tr>';
+        condFields.forEach(function(c){ var v=document.getElementById(c[1]).value; if(v.trim()) html+='<tr><td>'+c[0]+'</td><td>'+esc(v)+'</td></tr>'; });
+        html+='</table></div>';
+    }
+
+    // Hazards (only if Risk Assessment tab is enabled)
+    var showRisk=document.getElementById('optShowRisk').checked;
+    if(showRisk && hazards.length){
+        html+='<div class="print-section"><h3>Hazard Register</h3><table class="summary-table"><tr><th>ID</th><th>Zone</th><th>Type</th><th>Description</th><th>Phase</th>';
+        if(std==='13849'||std==='both') html+='<th>S/F/P</th><th>P-factors (Annex A)</th><th>PLr</th>';
+        if(std==='62061'||std==='both') html+='<th>Se/Fr/Pr/Av</th><th>SIL CL</th>';
+        html+='<th>Protective Measures</th></tr>';
+        for(var i=0;i<hazards.length;i++){
+            var h=hazards[i];
+            var plr=calcPLr(h.severity,h.frequency,h.probability);
+            var sil=calcSIL(h.se,h.fr,h.pr,h.av);
+            html+='<tr><td><strong>'+esc(h.id)+'</strong></td><td>'+esc(h.zone||'–')+'</td><td>'+esc(h.type||'–')+'</td><td>'+esc(h.description||'–')+'</td><td>'+esc(h.lifecycle||'–')+'</td>';
+            if(std==='13849'||std==='both'){
+                html+='<td>'+esc([h.severity,h.frequency,h.probability].filter(Boolean).join('/')||'–')+'</td>';
+                // P-factor Annex A column
+                var pfs=[h.pf1,h.pf2,h.pf3,h.pf4,h.pf5];
+                if(pfs.some(function(x){return x;})){
+                    html+='<td style="font-size:0.78rem;line-height:1.6">';
+                    var pfLabels=['Personnel','Speed','Ergonomics','Environment','Complexity'];
+                    for(var pi=0;pi<5;pi++){ if(pfs[pi]) html+=pfLabels[pi]+': <strong>'+esc(pfs[pi])+'</strong><br>'; }
+                    html+='</td>';
+                } else { html+='<td>–</td>'; }
+                html+='<td>'+(plr?'<span class="plr-badge plr-'+plr+'">PL '+plr+'</span>':'–')+'</td>';
+            }
+            if(std==='62061'||std==='both'){
+                html+='<td>'+esc([h.se,h.fr,h.pr,h.av].filter(Boolean).join('/')||'–')+'</td>';
+                html+='<td>'+(sil&&sil!=='OM'?'<span class="sil-badge sil-'+sil.charAt(4)+'">'+sil+'</span>':(sil==='OM'?'<span class="sil-badge sil-om">OM</span>':'–'))+'</td>';
+            }
+            // Measures column
+            var mArr=Array.isArray(h.measures)?h.measures:[];
+            if(mArr.length){
+                html+='<td><ul style="margin:0;padding-left:16px;font-size:0.82rem">';
+                for(var m=0;m<mArr.length;m++) html+='<li><em>'+esc(mArr[m].cat)+':</em> '+esc(mArr[m].desc)+'</li>';
+                html+='</ul></td>';
+            } else { html+='<td>–</td>'; }
+            html+='</tr>';
+        }
+        html+='</table></div>';
+    }
+
+    // Safety functions overview
+    if(safetyFunctions.length){
+        html+='<div class="print-section"><h3>Safety Functions – Overview</h3><table class="summary-table"><tr><th>ID</th><th>Name</th><th>Hazards</th>';
+        if(std==='13849'||std==='both') html+='<th>PLr</th><th>Cat.</th>';
+        if(std==='62061'||std==='both') html+='<th>SIL CL</th>';
+        html+='<th>Safe State</th><th>Response</th><th>Stop Time</th><th>Reset</th><th>Channels</th></tr>';
+        for(var i=0;i<safetyFunctions.length;i++){
+            var sf=safetyFunctions[i];
+            html+='<tr><td><strong>'+esc(sf.id)+'</strong></td><td>'+esc(sf.name||'–')+'</td><td>'+esc(sf.relatedHazards||'–')+'</td>';
+            if(std==='13849'||std==='both'){
+                html+='<td>'+(sf.plr?'<span class="plr-badge plr-'+sf.plr+'">PL '+sf.plr+'</span>':'–')+'</td>';
+                html+='<td>'+esc(sf.category?'Cat '+sf.category:'–')+'</td>';
+            }
+            if(std==='62061'||std==='both'){
+                html+='<td>'+(sf.silcl?'<span class="sil-badge sil-'+sf.silcl.charAt(4)+'">'+sf.silcl+'</span>':'–')+'</td>';
+            }
+            html+='<td>'+esc(sf.safeState||'–')+'</td><td>'+esc(sf.responseTime||'–')+'</td><td>'+esc(sf.maxStopTime||'–')+'</td><td>'+esc(sf.resetType||'–')+'</td><td>'+esc(sf.channels||'–')+'</td></tr>';
+        }
+        html+='</table></div>';
+
+        // Detail cards
+        html+='<div class="print-section"><h3>Safety Functions – Details</h3>';
+        for(var i=0;i<safetyFunctions.length;i++){
+            var sf=safetyFunctions[i];
+            html+='<div class="item-card" style="background:#fff"><div class="item-header"><span class="item-id">'+esc(sf.id)+' – '+esc(sf.name||'Unnamed')+'</span></div>';
+            html+='<table class="summary-table" style="font-size:0.85rem">';
+            var rows = [
+                ['Description', sf.description],['Trigger', sf.trigger],['Related hazards', sf.relatedHazards],
+                ['PLr', sf.plr?'PL '+sf.plr:'–'],['SIL CL', sf.silcl||'–'],['Category', sf.category?'Cat '+sf.category:'–'],
+                ['Safe state', sf.safeState],['Behaviour on fault', sf.behaviourOnFault],
+                ['Response time', sf.responseTime],['Max stop time', sf.maxStopTime],
+                ['Reset type', sf.resetType],['Restart conditions', sf.restartConditions],
+                ['Auto restart allowed', sf.autoRestartAllowed?'Yes':'No'],
+                ['Fault reaction', sf.faultReaction],
+                ['Diagnostic coverage', sf.diagnosticCoverage],['Faults to detect', sf.faultsToDetect],['Detection time', sf.detectionTime],
+                ['Channel structure', sf.channels],['Redundancy', sf.redundancy?'Yes':'No'],['Monitoring', sf.monitoring],
+                ['Input devices', sf.inputDevices],['Logic', sf.logicUnit],['Output devices', sf.outputDevices],
+                ['Operating mode', sf.operatingMode],
+                ['Interface – Operator', sf.interfaceOperator],['Interface – Machines', sf.interfaceMachines],['Interface – Control', sf.interfaceControl],
+                ['Muting', sf.muting?'Yes':'No'],['Muting conditions', sf.mutingConditions],
+                ['Bypass', sf.bypass?'Yes':'No'],['Bypass conditions', sf.bypassConditions],
+                ['Test interval', sf.testInterval],['Notes', sf.notes]
+            ];
+            rows.forEach(function(r){ html+='<tr><td style="width:180px;font-weight:600">'+r[0]+'</td><td>'+esc(r[1]||'–')+'</td></tr>'; });
+            html+='</table></div>';
+        }
+        html+='</div>';
+    }
+
+    // Validation
+    if(validations.length){
+        html+='<div class="print-section"><h3>Validation Plan</h3><table class="summary-table"><tr><th>ID</th><th>SF Ref</th><th>Requirement</th><th>Method</th><th>Acceptance Criteria</th><th>Status</th></tr>';
+        for(var i=0;i<validations.length;i++){
+            var v=validations[i];
+            html+='<tr><td>'+esc(v.id)+'</td><td>'+esc(v.sfRef||'–')+'</td><td>'+esc(v.requirement||'–')+'</td><td>'+esc(v.method||'–')+'</td><td>'+esc(v.acceptanceCriteria||'–')+'</td><td>'+esc(v.status||'–')+'</td></tr>';
+        }
+        html+='</table></div>';
+    }
+
+    if(!hazards.length && !safetyFunctions.length){
+        html='<div class="empty-state"><div class="empty-icon">📊</div><p>Add hazards and safety functions in their respective tabs first.</p></div>';
+    }
+
+    document.getElementById('summaryContent').innerHTML=html;
+    showToast('Summary updated');
+}
+
+// ==================== JSON Save/Load ====================
+function getAppState(){
+    collectHazardData(); collectSfData(); collectValData();
+    return {
+        version:2, type:'srs', savedAt: new Date().toISOString(),
+        project:{
+            name:document.getElementById('projName').value,
+            machine:document.getElementById('projMachine').value,
+            machineType:document.getElementById('projMachineType').value,
+            manufacturer:document.getElementById('projManufacturer').value,
+            serialNo:document.getElementById('projSerialNo').value,
+            author:document.getElementById('projAuthor').value,
+            approver:document.getElementById('projApprover').value,
+            date:document.getElementById('projDate').value,
+            revision:document.getElementById('projRevision').value,
+            standard:document.getElementById('projStandard').value,
+            description:document.getElementById('projDescription').value,
+            scope:document.getElementById('projScope').value,
+            normRef:document.getElementById('projNormRef').value,
+            showRisk:document.getElementById('optShowRisk').checked
+        },
+        limits:{
+            use:document.getElementById('limUse').value,
+            space:document.getElementById('limSpace').value,
+            time:document.getElementById('limTime').value,
+            env:document.getElementById('limEnv').value,
+            other:document.getElementById('limOther').value
+        },
+        conditions:{
+            temp:document.getElementById('condTemp').value,
+            humidity:document.getElementById('condHumidity').value,
+            dust:document.getElementById('condDust').value,
+            vibration:document.getElementById('condVibration').value,
+            emc:document.getElementById('condEMC').value,
+            supply:document.getElementById('condSupply').value,
+            other:document.getElementById('condOther').value
+        },
+        hazards:hazards, safetyFunctions:safetyFunctions, validations:validations,
+        nextHazardId:nextHazardId, nextSfId:nextSfId, nextValId:nextValId
+    };
+}
+function applyAppState(state){
+    if(!state||typeof state!=='object') throw new Error('Invalid file');
+    var p=state.project||{};
+    document.getElementById('projName').value=p.name||'';
+    document.getElementById('projMachine').value=p.machine||'';
+    document.getElementById('projMachineType').value=p.machineType||'';
+    document.getElementById('projManufacturer').value=p.manufacturer||'';
+    document.getElementById('projSerialNo').value=p.serialNo||'';
+    document.getElementById('projAuthor').value=p.author||'';
+    document.getElementById('projApprover').value=p.approver||'';
+    document.getElementById('projDate').value=p.date||'';
+    document.getElementById('projRevision').value=p.revision||'';
+    document.getElementById('projStandard').value=p.standard||'both';
+    document.getElementById('projDescription').value=p.description||'';
+    document.getElementById('projScope').value=p.scope||'';
+    document.getElementById('projNormRef').value=p.normRef||'';
+    document.getElementById('optShowRisk').checked=p.showRisk!==false;
+    toggleRiskTab();
+
+    var l=state.limits||{};
+    document.getElementById('limUse').value=l.use||'';
+    document.getElementById('limSpace').value=l.space||'';
+    document.getElementById('limTime').value=l.time||'';
+    document.getElementById('limEnv').value=l.env||'';
+    document.getElementById('limOther').value=l.other||'';
+
+    var c=state.conditions||{};
+    document.getElementById('condTemp').value=c.temp||'';
+    document.getElementById('condHumidity').value=c.humidity||'';
+    document.getElementById('condDust').value=c.dust||'';
+    document.getElementById('condVibration').value=c.vibration||'';
+    document.getElementById('condEMC').value=c.emc||'';
+    document.getElementById('condSupply').value=c.supply||'';
+    document.getElementById('condOther').value=c.other||'';
+
+    hazards=Array.isArray(state.hazards)?state.hazards:[];
+    // Migrate old existingMeasures string to measures array
+    for(var mi=0;mi<hazards.length;mi++){
+        if(!Array.isArray(hazards[mi].measures)){
+            hazards[mi].measures=hazards[mi].existingMeasures?[{desc:hazards[mi].existingMeasures,cat:'Other'}]:[];
+            delete hazards[mi].existingMeasures;
+        }
+        // Ensure P-factor fields exist for old data
+        if(!hazards[mi].pf1) hazards[mi].pf1='';
+        if(!hazards[mi].pf2) hazards[mi].pf2='';
+        if(!hazards[mi].pf3) hazards[mi].pf3='';
+        if(!hazards[mi].pf4) hazards[mi].pf4='';
+        if(!hazards[mi].pf5) hazards[mi].pf5='';
+    }
+    safetyFunctions=Array.isArray(state.safetyFunctions)?state.safetyFunctions:[];
+    validations=Array.isArray(state.validations)?state.validations:[];
+    nextHazardId=state.nextHazardId||hazards.length+1;
+    nextSfId=state.nextSfId||safetyFunctions.length+1;
+    nextValId=state.nextValId||validations.length+1;
+
+    renderHazards(); renderSF(); renderValidations();
+}
+
+function saveJson(){
+    var state=getAppState();
+    var name=(state.project.name||'SRS').replace(/[\\/:*?"<>|]/g,'_');
+    var blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json;charset=utf-8'});
+    var url=URL.createObjectURL(blob);
+    var a=document.createElement('a'); a.href=url; a.download=name+'_SRS.json'; a.click();
+    URL.revokeObjectURL(url);
+    showToast('💾 SRS saved as JSON');
+}
+function triggerJsonLoad(){ document.getElementById('jsonFileInput').click(); }
+document.getElementById('jsonFileInput').addEventListener('change',function(e){
+    var file=e.target.files[0]; if(!file) return;
+    var reader=new FileReader();
+    reader.onload=function(ev){
+        try{ applyAppState(JSON.parse(ev.target.result)); showToast('📂 SRS loaded!'); }
+        catch(err){ showToast('⚠️ Could not read file'); }
+    };
+    reader.readAsText(file,'utf-8');
+    e.target.value='';
+});
+
+// ==================== Print / PDF ====================
+function printReport(){
+    collectHazardData(); collectSfData(); collectValData();
+    generateSummary();
+
+    var pn=document.getElementById('projName').value||'SRS';
+    var pd=document.getElementById('projDate').value||'';
+    var pr=document.getElementById('projRevision').value||'';
+    var pa=document.getElementById('projAuthor').value||'';
+    var pv=document.getElementById('projApprover').value||'';
+    var pm=document.getElementById('projMachine').value||'';
+    var pmf=document.getElementById('projManufacturer').value||'';
+
+    document.getElementById('printSubtitle').textContent=
+        pm ? (pm + (pmf ? ' – ' + pmf : '')) : 'SRS Report';
+
+    var rightHtml = '<strong>' + esc(pn) + '</strong><br>';
+    if(pr) rightHtml += 'Rev. ' + esc(pr) + '<br>';
+    if(pd) rightHtml += esc(pd) + '<br>';
+    if(pa) rightHtml += 'By: ' + esc(pa) + '<br>';
+    if(pv) rightHtml += 'Approved: ' + esc(pv);
+    document.getElementById('printHeaderRight').innerHTML = rightHtml;
+
+    document.getElementById('printFooter').textContent =
+        pn + ' | Rev. ' + pr + ' | ' + pd + ' | ISO 13849-1 / IEC 62061';
+
+    // Show summary tab for print
+    document.getElementById('tab-summary').classList.add('active');
+
+    setTimeout(function(){
+        window.print();
+    }, 200);
+}
+
+// ==================== Init ====================
+document.getElementById('projDate').value=new Date().toISOString().split('T')[0];
+renderHazards(); renderSF(); renderValidations(); toggleRiskTab();
+</script>
+</body>
+</html>
