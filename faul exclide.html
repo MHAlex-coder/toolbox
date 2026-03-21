@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fault Exclusion – EN ISO 13849-2</title>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --danger: #dc2626;
+            --success: #16a34a;
+            --warning: #d97706;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1);
+            --mech-color: #6366f1;
+            --pneu-color: #0891b2;
+            --hydr-color: #ea580c;
+            --elec-color: #16a34a;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+            padding-bottom: 60px;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #1e3a5f 0%, #2563eb 100%);
+            color: #fff;
+            padding: 40px 20px 50px;
+            text-align: center;
+        }
+        .header h1 { font-size: 2rem; margin-bottom: 6px; }
+        .header p { opacity: 0.9; font-size: 1rem; }
+
+        .container {
+            max-width: 1100px;
+            margin: -25px auto 0;
+            padding: 0 20px;
+        }
+
+        .card {
+            background: var(--card);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            padding: 28px;
+            margin-bottom: 24px;
+            border: 1px solid var(--border);
+        }
+
+        h2 { color: var(--primary); margin-bottom: 14px; font-size: 1.35rem; }
+        h3 { font-size: 1.1rem; margin-bottom: 10px; }
+
+        .nav-back {
+            display: inline-block;
+            margin-bottom: 18px;
+            color: #fff;
+            text-decoration: none;
+            font-size: 0.9rem;
+            opacity: 0.8;
+        }
+        .nav-back:hover { opacity: 1; }
+
+        /* ── Flik-navigation ── */
+        .tab-bar {
+            display: flex;
+            gap: 0;
+            background: var(--card);
+            border-radius: 12px 12px 0 0;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-bottom: none;
+            margin-bottom: 0;
+        }
+        .tab-btn {
+            flex: 1;
+            padding: 14px 10px;
+            border: none;
+            background: #f8fafc;
+            cursor: pointer;
+            font-size: 0.92rem;
+            font-weight: 600;
+            color: var(--text-light);
+            transition: all .2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            border-bottom: 3px solid transparent;
+        }
+        .tab-btn:hover { background: #eef2ff; }
+        .tab-btn.active { background: #fff; color: var(--text); }
+        .tab-btn[data-tab="mech"].active { border-bottom-color: var(--mech-color); color: var(--mech-color); }
+        .tab-btn[data-tab="pneu"].active { border-bottom-color: var(--pneu-color); color: var(--pneu-color); }
+        .tab-btn[data-tab="hydr"].active { border-bottom-color: var(--hydr-color); color: var(--hydr-color); }
+        .tab-btn[data-tab="elec"].active { border-bottom-color: var(--elec-color); color: var(--elec-color); }
+
+        .tab-icon { font-size: 1.3rem; }
+
+        .tab-panel {
+            display: none;
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-top: none;
+            border-radius: 0 0 12px 12px;
+            padding: 28px;
+            margin-bottom: 24px;
+        }
+        .tab-panel.active { display: block; }
+
+        .bilaga-ref {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 4px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+        .bilaga-ref.mech { background: #eef2ff; color: var(--mech-color); }
+        .bilaga-ref.pneu { background: #ecfeff; color: var(--pneu-color); }
+        .bilaga-ref.hydr { background: #fff7ed; color: var(--hydr-color); }
+        .bilaga-ref.elec { background: #f0fdf4; color: var(--elec-color); }
+
+        /* ── Komponent-kort (accordion) ── */
+        .comp-section {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            margin-bottom: 12px;
+            overflow: hidden;
+        }
+        .comp-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px 18px;
+            background: #fafbfc;
+            cursor: pointer;
+            user-select: none;
+            transition: background .15s;
+        }
+        .comp-header:hover { background: #f1f5f9; }
+        .comp-header h3 { margin: 0; font-size: 1rem; display: flex; align-items: center; gap: 10px; }
+        .comp-header .arrow {
+            transition: transform .25s;
+            font-size: 0.8rem;
+            color: var(--text-light);
+        }
+        .comp-header.open .arrow { transform: rotate(90deg); }
+        .comp-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height .35s ease;
+        }
+        .comp-body.open { max-height: 2000px; }
+        .comp-body-inner { padding: 18px; border-top: 1px solid var(--border); }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+            margin-bottom: 16px;
+        }
+        @media (max-width: 700px) {
+            .info-grid { grid-template-columns: 1fr; }
+            .tab-btn { font-size: 0.78rem; padding: 10px 6px; }
+            .tab-btn span.tab-label { display: none; }
+        }
+        .info-box {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 14px;
+            border: 1px solid var(--border);
+        }
+        .info-box h4 {
+            font-size: 0.82rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-light);
+            margin-bottom: 8px;
+        }
+        .info-box ul { padding-left: 18px; font-size: 0.9rem; }
+        .info-box li { margin-bottom: 4px; }
+
+        /* ── Checklista ── */
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            border-bottom: 1px solid #f1f5f9;
+        }
+        .checklist-item:last-child { border-bottom: none; }
+        input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+            margin-top: 2px;
+            flex-shrink: 0;
+        }
+        .checklist-item label { cursor: pointer; font-size: 0.9rem; }
+
+        /* ── Statusindikator ── */
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 16px;
+            padding: 14px 18px;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.92rem;
+            transition: all .3s;
+        }
+        .status-none {
+            background: #f1f5f9;
+            color: var(--text-light);
+            border: 1px solid var(--border);
+        }
+        .status-partial {
+            background: #fffbeb;
+            color: #92400e;
+            border: 1px solid #fcd34d;
+        }
+        .status-ok {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+        .status-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .status-none .status-dot { background: #94a3b8; }
+        .status-partial .status-dot { background: #f59e0b; }
+        .status-ok .status-dot { background: #22c55e; }
+
+        .doc-list {
+            margin-top: 10px;
+            padding: 12px 16px;
+            background: #eff6ff;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            color: #1e40af;
+            display: none;
+        }
+        .doc-list.show { display: block; }
+        .doc-list h4 { margin-bottom: 6px; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.3px; }
+        .doc-list ul { padding-left: 18px; }
+        .doc-list li { margin-bottom: 3px; }
+
+        /* ── Sammanfattning ── */
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 14px;
+        }
+        .summary-card {
+            padding: 16px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            background: #fafbfc;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .summary-card .sc-icon { font-size: 1.5rem; }
+        .summary-card .sc-info { flex: 1; }
+        .summary-card .sc-name { font-weight: 600; font-size: 0.9rem; }
+        .summary-card .sc-status { font-size: 0.8rem; color: var(--text-light); }
+        .summary-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+        .sd-grey { background: #cbd5e1; }
+        .sd-yellow { background: #fbbf24; }
+        .sd-green { background: #22c55e; }
+
+        /* ── Sökfält ── */
+        .search-box {
+            width: 100%;
+            padding: 12px 16px;
+            border: 2px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            margin-bottom: 16px;
+            outline: none;
+            transition: border-color .2s;
+        }
+        .search-box:focus { border-color: var(--primary); }
+        .search-box::placeholder { color: #a0aec0; }
+
+        .hidden { display: none !important; }
+
+        .print-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 20px;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 600;
+            transition: background .2s;
+        }
+        .print-btn:hover { background: var(--primary-hover); }
+
+        /* Disclaimer */
+        .disclaimer-btn {
+            margin-left: auto; padding: 8px 16px; border: 2px solid var(--border);
+            border-radius: 8px; background: var(--card); color: var(--text-light);
+            font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+        }
+        .disclaimer-btn:hover { background: rgba(37,99,235,.08); border-color: rgba(37,99,235,.3); color: var(--primary); }
+        .disclaimer-overlay {
+            display: none; position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,.45); justify-content: center; align-items: center;
+        }
+        .disclaimer-overlay.visible { display: flex; }
+        .disclaimer-box {
+            background: var(--card); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+            max-width: 680px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 32px;
+        }
+        .disclaimer-box h2 { font-size: 1.15rem; margin-bottom: 16px; color: var(--primary); }
+        .disclaimer-box p { font-size: 0.85rem; color: var(--text-light); line-height: 1.6; margin: 0 0 6px; }
+        .disclaimer-box .close-btn {
+            margin-top: 18px; padding: 10px 28px; border: none; border-radius: 8px;
+            background: var(--primary); color: #fff; font-weight: 700; cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .disclaimer-box .close-btn:hover { background: var(--primary-hover); }
+
+        @media print {
+            .header { padding: 20px; }
+            .tab-bar, .search-box, .print-btn, .nav-back, .disclaimer-btn { display: none !important; }
+            .tab-panel { display: block !important; border: none; padding: 10px 0; }
+            .comp-body { max-height: none !important; }
+            .comp-body.open, .comp-body { max-height: none !important; overflow: visible; }
+            body { padding: 0; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="header">
+    <a href="index.html" class="nav-back">&#8592; Back to main menu</a>
+    <h1>Fault Exclusion according to EN ISO 13849-2</h1>
+    <p>Complete reference tool &ndash; Mechanics &bull; Pneumatics &bull; Hydraulics &bull; Electrical/Electronics</p>
+</div>
+
+<div class="container">
+
+    <!-- ═══════════ SUMMARY ═══════════ -->
+    <div class="card" id="summaryCard">
+        <h2>&#128202; Summary</h2>
+        <p style="color:var(--text-light);font-size:.85rem;margin-bottom:14px;">Real-time overview &ndash; check items in the checklists below and the status here updates automatically.</p>
+        <div class="summary-grid" id="summaryGrid">
+            <!-- Populated by JS -->
+        </div>
+        <div style="margin-top:18px;text-align:right;">
+            <button class="print-btn" onclick="window.print()">&#128424; Print / Export PDF</button>
+        </div>
+    </div>
+
+    <!-- ═══════════ SEARCH ═══════════ -->
+    <input type="text" class="search-box" id="searchInput" placeholder="&#128269; Search component (e.g. &quot;valve&quot;, &quot;cable&quot;, &quot;cylinder&quot;)...">
+
+    <!-- ═══════════ TABS ═══════════ -->
+    <div class="tab-bar">
+        <button class="tab-btn active" data-tab="mech" onclick="switchTab('mech')">
+            <span class="tab-icon">&#9881;</span> <span class="tab-label">Mechanics</span>
+        </button>
+        <button class="tab-btn" data-tab="pneu" onclick="switchTab('pneu')">
+            <span class="tab-icon">&#128168;</span> <span class="tab-label">Pneumatics</span>
+        </button>
+        <button class="tab-btn" data-tab="hydr" onclick="switchTab('hydr')">
+            <span class="tab-icon">&#128167;</span> <span class="tab-label">Hydraulics</span>
+        </button>
+        <button class="tab-btn" data-tab="elec" onclick="switchTab('elec')">
+            <span class="tab-icon">&#9889;</span> <span class="tab-label">Electrical / Electronics</span>
+        </button>
+        <button class="disclaimer-btn" id="disclaimerBtn">⚠️ Disclaimer</button>
+    </div>
+
+<!-- Disclaimer overlay -->
+<div class="disclaimer-overlay" id="disclaimerOverlay">
+    <div class="disclaimer-box">
+        <h2>⚠️ Important Notice &amp; Disclaimer</h2>
+        <p>These tools are provided "as is" for informational and reference purposes only. The author makes no warranties, express or implied, regarding the accuracy, completeness, or reliability of any calculations, results, or interpretations generated by these tools.</p>
+        <p>The user assumes all responsibility for verifying results and ensuring they meet applicable standards, regulations, and project requirements.</p>
+        <p>The author shall not be held liable for any errors, omissions, or damages arising from the use of or reliance on these tools.</p>
+        <p style="margin-top:14px;font-weight:600;color:var(--text);">Always consult qualified professionals and official documentation before making engineering decisions.</p>
+        <button class="close-btn" id="disclaimerClose">Close</button>
+    </div>
+</div>
+
+    <!-- ═══════════ MECHANICS (Annex A) ═══════════ -->
+    <div class="tab-panel active" id="panel-mech">
+        <span class="bilaga-ref mech">Annex A &ndash; Mechanical components</span>
+
+        <!-- Shafts / Spindles -->
+        <div class="comp-section" data-comp="Shafts Spindles Axis" id="comp-axlar">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9881; Shafts / Spindles</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul>
+                                <li>Fracture due to fatigue</li>
+                                <li>Fracture due to overload</li>
+                            </ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Typical reference</h4>
+                            <ul>
+                                <li>EN 13849-2 Table A.4</li>
+                                <li>Safety factor &ge; 2 against fracture limit</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist for fault exclusion</h4>
+                    <div class="checklist-item"><input type="checkbox" id="m1c1" onchange="updateStatus('axlar')"><label for="m1c1">Component withstands at least 2&times; maximum torque (incl. braking torque).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m1c2" onchange="updateStatus('axlar')"><label for="m1c2">Material is tough (ductile) &ndash; EN 10204 type 3.1 certificate available.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m1c3" onchange="updateStatus('axlar')"><label for="m1c3">No sharp corners &ndash; radii &ge; 0.5 mm at all stress concentrations.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m1c4" onchange="updateStatus('axlar')"><label for="m1c4">Fatigue life calculation (load cycles / fatigue) completed and approved.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m1c5" onchange="updateStatus('axlar')"><label for="m1c5">Corrosion protection or suitable surface treatment for the operating environment.</label></div>
+                    <div class="status-indicator status-none" id="status-axlar"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-axlar"><h4>&#128203; Documentation for technical file</h4><ul><li>Strength calculation (FEM or analytical)</li><li>Material certificate EN 10204 type 3.1</li><li>Drawing with radius specifications</li><li>Fatigue analysis / service life calculation</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gears / Gearboxes -->
+        <div class="comp-section" data-comp="Gears Gearboxes Gear Transmission" id="comp-kugg">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9881; Gears / Gearboxes</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Tooth fracture</li><li>Separation of gear from shaft</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Typical reference</h4>
+                            <ul><li>EN 13849-2 Table A.4</li><li>Service factor f<sub>B</sub> &ge; 2.0</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist for fault exclusion</h4>
+                    <div class="checklist-item"><input type="checkbox" id="m2c1" onchange="updateStatus('kugg')"><label for="m2c1">Service factor f<sub>B</sub> &ge; 2.0 (verified with manufacturer data).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m2c2" onchange="updateStatus('kugg')"><label for="m2c2">Correct lubrication ensured &ndash; lubrication schedule available.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m2c3" onchange="updateStatus('kugg')"><label for="m2c3">Enclosure protects against contamination and external forces.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m2c4" onchange="updateStatus('kugg')"><label for="m2c4">Axial retention of gear on shaft verified (keyway / interference fit).</label></div>
+                    <div class="status-indicator status-none" id="status-kugg"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-kugg"><h4>&#128203; Documentation for technical file</h4><ul><li>Manufacturer datasheet (e.g. SEW, Nord)</li><li>Calculated service factor</li><li>Lubrication schedule</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chains / Belts -->
+        <div class="comp-section" data-comp="Chains Belts Chain Belt Transmission" id="comp-kedja">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9881; Chains / Belts</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Fracture (rarely permitted as sole safeguard)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Typical reference</h4>
+                            <ul><li>EN 13849-2 Table A.4</li><li>Safety factor &ge; 10 (chain), &ge; 8 (belt)</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="m3c1" onchange="updateStatus('kedja')"><label for="m3c1">Safety factor &ge; 10 (chain) or &ge; 8 (belt) against breaking load.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m3c2" onchange="updateStatus('kedja')"><label for="m3c2">Periodic maintenance and inspection specified.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m3c3" onchange="updateStatus('kedja')"><label for="m3c3">No dynamic shock loads exceeding design limits.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m3c4" onchange="updateStatus('kedja')"><label for="m3c4">Correct tension maintained (tensioner / adjustment).</label></div>
+                    <div class="status-indicator status-none" id="status-kedja"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-kedja"><h4>&#128203; Documentation</h4><ul><li>Load calculation</li><li>Maintenance log / interval plan</li><li>Manufacturer data with breaking load</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fasteners -->
+        <div class="comp-section" data-comp="Fasteners Screw Bolt Nut" id="comp-skruv">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9881; Fasteners (Screws / Bolts)</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Loosening due to vibration</li><li>Fatigue fracture</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Typical reference</h4>
+                            <ul><li>EN 13849-2 Table A.4</li><li>VDI 2230 (bolted joint calculation)</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="m4c1" onchange="updateStatus('skruv')"><label for="m4c1">Anti-loosening device (Nord-Lock, thread-locking, split pins).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m4c2" onchange="updateStatus('skruv')"><label for="m4c2">Correct tightening torque specified and verified.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m4c3" onchange="updateStatus('skruv')"><label for="m4c3">Property class matched to load (e.g. 8.8, 10.9).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m4c4" onchange="updateStatus('skruv')"><label for="m4c4">Corrosion protection suitable for the environment.</label></div>
+                    <div class="status-indicator status-none" id="status-skruv"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-skruv"><h4>&#128203; Documentation</h4><ul><li>Assembly instruction with torque values</li><li>Torque record (verification)</li><li>VDI 2230 calculation for critical joints</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Springs -->
+        <div class="comp-section" data-comp="Springs Compression Spring Tension Spring" id="comp-fjadr">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9881; Springs</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Fracture (fatigue)</li><li>Permanent deformation (set)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Typical reference</h4>
+                            <ul><li>EN 13849-2 Table A.4</li><li>EN 13906-1 (compression springs)</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="m5c1" onchange="updateStatus('fjadr')"><label for="m5c1">Designed per EN 13906 with sufficient safety margin.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m5c2" onchange="updateStatus('fjadr')"><label for="m5c2">Material suitable for dynamic loading (e.g. SiCr steel).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m5c3" onchange="updateStatus('fjadr')"><label for="m5c3">Fatigue life (cycles) documented and exceeds operational requirements.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m5c4" onchange="updateStatus('fjadr')"><label for="m5c4">Spring is guided (prevents lateral deflection on failure).</label></div>
+                    <div class="status-indicator status-none" id="status-fjadr"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-fjadr"><h4>&#128203; Documentation</h4><ul><li>Spring calculation (force, deflection, life)</li><li>Manufacturer data / datasheet</li><li>Material certificate</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cam Mechanisms -->
+        <div class="comp-section" data-comp="Cam Cam Follower Cam Disc Curve Disc" id="comp-kam">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9881; Cam Mechanisms / Cam Discs</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Fracture</li><li>Wear leading to functional failure</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Typical reference</h4>
+                            <ul><li>EN 13849-2 Table A.4</li><li>Surface treatment and hardening</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="m6c1" onchange="updateStatus('kam')"><label for="m6c1">Over-dimensioned against maximum dynamic load.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m6c2" onchange="updateStatus('kam')"><label for="m6c2">Hardened and ground material (surface hardening verified).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m6c3" onchange="updateStatus('kam')"><label for="m6c3">Lubrication ensured throughout the entire duty cycle.</label></div>
+                    <div class="status-indicator status-none" id="status-kam"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-kam"><h4>&#128203; Documentation</h4><ul><li>Load calculation</li><li>Hardening protocol</li><li>Lubrication schedule</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Guides / Linear Units -->
+        <div class="comp-section" data-comp="Guide Linear Unit Sliding Bearing Rail Linear Guide" id="comp-styr">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9881; Guides / Linear Units</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Jamming / blocking</li><li>Fracture of mounting</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Typical reference</h4>
+                            <ul><li>EN 13849-2 Table A.4</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="m7c1" onchange="updateStatus('styr')"><label for="m7c1">Guide dimensioned for actual load incl. dynamic forces.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m7c2" onchange="updateStatus('styr')"><label for="m7c2">Lubrication and maintenance specified.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="m7c3" onchange="updateStatus('styr')"><label for="m7c3">Protection against contamination (seals, bellows).</label></div>
+                    <div class="status-indicator status-none" id="status-styr"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-styr"><h4>&#128203; Documentation</h4><ul><li>Manufacturer data with load capacity</li><li>Maintenance intervals</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /panel-mech -->
+
+    <!-- ═══════════ PNEUMATICS (Annex B) ═══════════ -->
+    <div class="tab-panel" id="panel-pneu">
+        <span class="bilaga-ref pneu">Annex B &ndash; Pneumatic components</span>
+
+        <!-- Pneumatic cylinders -->
+        <div class="comp-section" data-comp="Pneumatic Cylinder Actuator" id="comp-pcyl">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#128168; Pneumatic Cylinders</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Cylinder body fracture</li><li>Piston rod fracture</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Internal leakage (seal wear)</li><li>External leakage</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist for exclusion of body fracture</h4>
+                    <div class="checklist-item"><input type="checkbox" id="p1c1" onchange="updateStatus('pcyl')"><label for="p1c1">Cylinder is type-approved per ISO 15552 or ISO 6432.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p1c2" onchange="updateStatus('pcyl')"><label for="p1c2">Working pressure is below maximum allowable pressure with safety margin.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p1c3" onchange="updateStatus('pcyl')"><label for="p1c3">No corrosive environment or protective measures in place.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p1c4" onchange="updateStatus('pcyl')"><label for="p1c4">No external mechanical loads on the piston rod beyond axial force.</label></div>
+                    <div class="status-indicator status-none" id="status-pcyl"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-pcyl"><h4>&#128203; Documentation</h4><ul><li>Datasheet with pressure rating</li><li>Declaration of conformity with ISO 15552/6432</li><li>Operating parameters (pressure, temperature)</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pneumatic Valves -->
+        <div class="comp-section" data-comp="Pneumatic Valve Solenoid Valve Directional Valve Control Valve" id="comp-pvent">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#128168; Valves (directional / control valves)</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Body fracture</li><li>Manual override stuck (if correctly dimensioned)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Failure to switch (solenoid / spring failure)</li><li>Internal leakage (spool wear)</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist for exclusion of body fracture</h4>
+                    <div class="checklist-item"><input type="checkbox" id="p2c1" onchange="updateStatus('pvent')"><label for="p2c1">Valve rated for maximum system pressure per datasheet.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p2c2" onchange="updateStatus('pvent')"><label for="p2c2">Valve installed per manufacturer instructions.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p2c3" onchange="updateStatus('pvent')"><label for="p2c3">Compressed air filtration ensured (contamination protection).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p2c4" onchange="updateStatus('pvent')"><label for="p2c4">Operating temperature within specified range.</label></div>
+                    <div class="status-indicator status-none" id="status-pvent"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-pvent"><h4>&#128203; Documentation</h4><ul><li>Datasheet with pressure and temperature range</li><li>Pneumatic circuit diagram</li><li>Filter specification</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pipes / Hoses (pneumatics) -->
+        <div class="comp-section" data-comp="Pipe Hose Tubing Pneumatic Hose Fitting" id="comp-prör">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#128168; Pipes / Hoses</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Fracture of metal pipe (if correctly dimensioned)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Hose burst (ageing)</li><li>Leakage at fittings</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="p3c1" onchange="updateStatus('prör')"><label for="p3c1">Pipe/hose rated for &ge; 4&times; working pressure (burst pressure).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p3c2" onchange="updateStatus('prör')"><label for="p3c2">Hoses protected against mechanical damage (abrasion protection).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p3c3" onchange="updateStatus('prör')"><label for="p3c3">UV protection and temperature range considered for polymer hoses.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p3c4" onchange="updateStatus('prör')"><label for="p3c4">Periodic hose replacement specified (maximum service life).</label></div>
+                    <div class="status-indicator status-none" id="status-prör"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-prör"><h4>&#128203; Documentation</h4><ul><li>Datasheet with burst pressure</li><li>Hose replacement intervals</li><li>Pneumatic circuit diagram</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pressure Regulators -->
+        <div class="comp-section" data-comp="Pressure Regulator Pressure Reducing Valve Pressure Switch" id="comp-preg">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#128168; Pressure Regulators / Pressure Limiters</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Body fracture</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Full open (pressure breakthrough)</li><li>Internal leakage</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="p4c1" onchange="updateStatus('preg')"><label for="p4c1">Regulator rated for maximum inlet pressure per datasheet.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p4c2" onchange="updateStatus('preg')"><label for="p4c2">Safety/relief valve fitted downstream if pressure breakthrough is hazardous.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="p4c3" onchange="updateStatus('preg')"><label for="p4c3">Installed in clean and dry environment or protected.</label></div>
+                    <div class="status-indicator status-none" id="status-preg"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-preg"><h4>&#128203; Documentation</h4><ul><li>Datasheet with pressure range</li><li>Pneumatic diagram with safety/relief valve</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /panel-pneu -->
+
+    <!-- ═══════════ HYDRAULICS (Annex C) ═══════════ -->
+    <div class="tab-panel" id="panel-hydr">
+        <span class="bilaga-ref hydr">Annex C &ndash; Hydraulic components</span>
+
+        <!-- Hydraulic Cylinders -->
+        <div class="comp-section" data-comp="Hydraulic Cylinder Hydraulic Actuator" id="comp-hcyl">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#128167; Hydraulic Cylinders</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Body fracture</li><li>Piston rod fracture</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Internal leakage (seal)</li><li>External leakage</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="h1c1" onchange="updateStatus('hcyl')"><label for="h1c1">Cylinder dimensioned for max system pressure including pressure spikes.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h1c2" onchange="updateStatus('hcyl')"><label for="h1c2">Piston rod dimensioned against buckling (Euler).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h1c3" onchange="updateStatus('hcyl')"><label for="h1c3">Material is corrosion-resistant or protected.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h1c4" onchange="updateStatus('hcyl')"><label for="h1c4">Cylinder type-approved per ISO 6020/6022.</label></div>
+                    <div class="status-indicator status-none" id="status-hcyl"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-hcyl"><h4>&#128203; Documentation</h4><ul><li>Datasheet with pressure rating</li><li>Buckling calculation (for long strokes)</li><li>ISO 6020/6022 certificate</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hydraulic Valves -->
+        <div class="comp-section" data-comp="Hydraulic Valve Directional Valve Proportional Valve Servo Valve" id="comp-hvent">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#128167; Hydraulic Valves (directional / pressure / flow)</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Body fracture</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Failure to switch (solenoid/spring failure)</li><li>Spool sticking (contamination)</li><li>Internal leakage</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="h2c1" onchange="updateStatus('hvent')"><label for="h2c1">Valve rated for maximum system pressure with margin.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h2c2" onchange="updateStatus('hvent')"><label for="h2c2">Hydraulic oil filtration meets valve cleanliness requirement (ISO 4406).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h2c3" onchange="updateStatus('hvent')"><label for="h2c3">Oil temperature maintained within specified range.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h2c4" onchange="updateStatus('hvent')"><label for="h2c4">Installed per manufacturer specification (torque, pipe connections).</label></div>
+                    <div class="status-indicator status-none" id="status-hvent"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-hvent"><h4>&#128203; Documentation</h4><ul><li>Datasheet with pressure and temperature range</li><li>Cleanliness class specification</li><li>Hydraulic circuit diagram</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hydraulic Hoses & Pipes -->
+        <div class="comp-section" data-comp="Hydraulic Hose Hydraulic Pipe High-pressure Hose" id="comp-hrör">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#128167; Hoses / Pipes</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Fracture of steel pipe (if correctly dimensioned)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Hose burst (ageing, abrasion)</li><li>Leakage at fittings</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="h3c1" onchange="updateStatus('hrör')"><label for="h3c1">Burst pressure &ge; 4&times; working pressure for hoses.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h3c2" onchange="updateStatus('hrör')"><label for="h3c2">Hoses protected against mechanical impact and heat.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h3c3" onchange="updateStatus('hrör')"><label for="h3c3">Maximum service life and replacement interval stated (max 6 years recommended).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h3c4" onchange="updateStatus('hrör')"><label for="h3c4">Fittings correct for pressure class (no swage fittings on high-pressure hose).</label></div>
+                    <div class="status-indicator status-none" id="status-hrör"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-hrör"><h4>&#128203; Documentation</h4><ul><li>Hose manufacturer data with burst pressure</li><li>Replacement intervals documented</li><li>Hydraulic circuit diagram</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Accumulators -->
+        <div class="comp-section" data-comp="Accumulator Hydraulic Accumulator Pressure Vessel" id="comp-hack">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#128167; Accumulators</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Vessel fracture (if Pressure Equipment Directive is followed)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Bladder/diaphragm burst</li><li>Gas pressure loss</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="h4c1" onchange="updateStatus('hack')"><label for="h4c1">Accumulator CE-marked per PED (2014/68/EU).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h4c2" onchange="updateStatus('hack')"><label for="h4c2">Safety block valve fitted for pressure relief during maintenance.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="h4c3" onchange="updateStatus('hack')"><label for="h4c3">Periodic inspection planned per applicable regulations.</label></div>
+                    <div class="status-indicator status-none" id="status-hack"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-hack"><h4>&#128203; Documentation</h4><ul><li>CE/PED certificate</li><li>Inspection record</li><li>Hydraulic circuit diagram</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /panel-hydr -->
+
+    <!-- ═══════════ ELECTRICAL / ELECTRONICS (Annex D) ═══════════ -->
+    <div class="tab-panel" id="panel-elec">
+        <span class="bilaga-ref elec">Annex D &ndash; Electrical / Electronic components</span>
+
+        <!-- Kablar / Ledare -->
+        <!-- Cables / Conductors -->
+        <div class="comp-section" data-comp="Cable Conductor Cable Routing Wire" id="comp-kabel">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9889; Cables / Conductors</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Short circuit between conductors</li><li>Short circuit to earth/PE</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Open circuit (cable break)</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="e1c1" onchange="updateStatus('kabel')"><label for="e1c1">Cables routed in protected enclosures (cable duct, flexible conduit).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e1c2" onchange="updateStatus('kabel')"><label for="e1c2">Correct insulation for voltage level (basic + supplementary insulation where required).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e1c3" onchange="updateStatus('kabel')"><label for="e1c3">Conductors are separated (safety circuits separated from power circuits).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e1c4" onchange="updateStatus('kabel')"><label for="e1c4">Strain relief on all cables in moving applications.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e1c5" onchange="updateStatus('kabel')"><label for="e1c5">Protected against external influences (heat, chemicals, UV).</label></div>
+                    <div class="status-indicator status-none" id="status-kabel"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-kabel"><h4>&#128203; Documentation</h4><ul><li>Cable specification (cross-section, insulation, temperature class)</li><li>Cable routing drawing</li><li>Insulation test record</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Relays / Contactors -->
+        <div class="comp-section" data-comp="Relä Kontaktor Säkerhetsrelä Tvångsstyrd" id="comp-rela">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9889; Rel&auml;er / Kontaktorer</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Fel som kan uteslutas</h4>
+                            <ul><li>Kontaktsvetsning (vid tv&aring;ngsstyrda kontakter)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Fel som normalt INTE kan uteslutas</h4>
+                            <ul><li>Ej &ouml;ppning (vid standard-rel&auml; utan tv&aring;ngsstyrning)</li><li>Kontaktsvetsning (standard)</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklista f&ouml;r uteslutande av svetsning</h4>
+                    <div class="checklist-item"><input type="checkbox" id="e2c1" onchange="updateStatus('rela')"><label for="e2c1">Rel&auml;/kontaktor har tv&aring;ngsstyrda kontakter enl. IEC 61810-3.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e2c2" onchange="updateStatus('rela')"><label for="e2c2">Kontakterna &auml;r dimensionerade f&ouml;r verklig last (AC-3/DC-13 etc.).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e2c3" onchange="updateStatus('rela')"><label for="e2c3">Br&auml;nns&auml;kring/kortslutningsskydd dimensionerat korrekt uppstr&ouml;ms.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e2c4" onchange="updateStatus('rela')"><label for="e2c4">Br&aring;-sl&auml;ckning (RC-l&auml;nk, diod) vid induktiv last.</label></div>
+                    <div class="status-indicator status-none" id="status-rela"><span class="status-dot"></span><span class="status-text">Ingen kryssad ännu</span></div>
+                    <div class="doc-list" id="doc-rela"><h4>&#128203; Dokumentation</h4><ul><li>Datablad med kontaktdata (B10d-v&auml;rde)</li><li>IEC 61810-3-intyg (tv&aring;ngsstyrning)</li><li>Kretschema</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sensors / Transducers / Switches -->
+        <div class="comp-section" data-comp="Sensor Transducer Switch Limit Switch Proximity Sensor Position Sensor" id="comp-sensor">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9889; Sensors / Transducers / Limit Switches</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul>
+                                <li>Short circuit output &ndash; supply (with special design)</li>
+                                <li>Body fracture (with correct IP class)</li>
+                            </ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul>
+                                <li>No actuation (missed object)</li>
+                                <li>Permanently ON or OFF</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="e3c1" onchange="updateStatus('sensor')"><label for="e3c1">Sensor is of &quot;positive opening&quot; type (NC contact) or coded safety sensor.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e3c2" onchange="updateStatus('sensor')"><label for="e3c2">IP class suitable for the environment (IP67 in wet/dusty conditions).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e3c3" onchange="updateStatus('sensor')"><label for="e3c3">Mounting ensures correct actuation (distance, angle).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e3c4" onchange="updateStatus('sensor')"><label for="e3c4">Protected against manipulation (if safety function).</label></div>
+                    <div class="status-indicator status-none" id="status-sensor"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-sensor"><h4>&#128203; Documentation</h4><ul><li>Datasheet with IP class and contact data</li><li>Mounting drawing</li><li>Circuit diagram</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Circuit Boards / PCB -->
+        <div class="comp-section" data-comp="Circuit Board PCB Electronics Control Card PLC" id="comp-pcb">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9889; Circuit Boards / PCB</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Solder joint fracture (with correct process)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Component failure (IC, transistor)</li><li>Short circuit between tracks</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="e4c1" onchange="updateStatus('pcb')"><label for="e4c1">Soldering process qualified (IPC-A-610 or equivalent).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e4c2" onchange="updateStatus('pcb')"><label for="e4c2">Conformal coating or suitable protection against contamination/moisture.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e4c3" onchange="updateStatus('pcb')"><label for="e4c3">EMC protection (layout rules, track clearances).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e4c4" onchange="updateStatus('pcb')"><label for="e4c4">Vibration resistance verified for the intended environment.</label></div>
+                    <div class="status-indicator status-none" id="status-pcb"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-pcb"><h4>&#128203; Documentation</h4><ul><li>Soldering standard / IPC reference</li><li>EMC test report</li><li>Layout safety analysis</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connectors / Plugs -->
+        <div class="comp-section" data-comp="Connector Plug Terminal Strip Cable Lug" id="comp-kontakt">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9889; Connectors / Plugs</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>Separation (with locked connector)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Increased contact resistance</li><li>Contact failure (corrosion)</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="e5c1" onchange="updateStatus('kontakt')"><label for="e5c1">Connector has mechanical locking (bayonet, screw-lock).</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e5c2" onchange="updateStatus('kontakt')"><label for="e5c2">Correct IP class for the environment.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e5c3" onchange="updateStatus('kontakt')"><label for="e5c3">Current capacity exceeds actual load with margin.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e5c4" onchange="updateStatus('kontakt')"><label for="e5c4">Keying prevents incorrect mating.</label></div>
+                    <div class="status-indicator status-none" id="status-kontakt"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-kontakt"><h4>&#128203; Documentation</h4><ul><li>Datasheet with current/voltage rating</li><li>Wiring diagram</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Fuses / Overload Protection -->
+        <div class="comp-section" data-comp="Fuse Overload Motor Protection Circuit Breaker MCB" id="comp-sakr">
+            <div class="comp-header" onclick="toggleComp(this)">
+                <h3>&#9889; Fuses / Overload Protection</h3>
+                <span class="arrow">&#9654;</span>
+            </div>
+            <div class="comp-body">
+                <div class="comp-body-inner">
+                    <div class="info-grid">
+                        <div class="info-box">
+                            <h4>Faults that can be excluded</h4>
+                            <ul><li>No trip on overload (an oversized fuse is a design fault)</li></ul>
+                        </div>
+                        <div class="info-box">
+                            <h4>Faults that CANNOT normally be excluded</h4>
+                            <ul><li>Nuisance tripping</li></ul>
+                        </div>
+                    </div>
+                    <h4 style="margin-bottom:8px;">Checklist</h4>
+                    <div class="checklist-item"><input type="checkbox" id="e6c1" onchange="updateStatus('sakr')"><label for="e6c1">Fuse/motor protector correctly rated for the circuit.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e6c2" onchange="updateStatus('sakr')"><label for="e6c2">Breaking capacity exceeds maximum prospective short-circuit current.</label></div>
+                    <div class="checklist-item"><input type="checkbox" id="e6c3" onchange="updateStatus('sakr')"><label for="e6c3">Selectivity between protective devices verified.</label></div>
+                    <div class="status-indicator status-none" id="status-sakr"><span class="status-dot"></span><span class="status-text">None checked yet</span></div>
+                    <div class="doc-list" id="doc-sakr"><h4>&#128203; Documentation</h4><ul><li>Fuse list with rated data</li><li>Short-circuit calculation</li><li>Selectivity diagram</li></ul></div>
+                </div>
+            </div>
+        </div>
+
+    </div><!-- /panel-elec -->
+
+</div><!-- /container -->
+
+<script>
+// ══════════ Component metadata ══════════
+const components = {
+    // Mechanics
+    axlar:   { name: 'Shafts / Spindles',       tab: 'mech', checks: ['m1c1','m1c2','m1c3','m1c4','m1c5'], icon: '⚙️' },
+    kugg:    { name: 'Gears / Gearboxes',        tab: 'mech', checks: ['m2c1','m2c2','m2c3','m2c4'],       icon: '⚙️' },
+    kedja:   { name: 'Chains / Belts',           tab: 'mech', checks: ['m3c1','m3c2','m3c3','m3c4'],       icon: '⚙️' },
+    skruv:   { name: 'Fasteners',                tab: 'mech', checks: ['m4c1','m4c2','m4c3','m4c4'],       icon: '⚙️' },
+    fjadr:   { name: 'Springs',                  tab: 'mech', checks: ['m5c1','m5c2','m5c3','m5c4'],       icon: '⚙️' },
+    kam:     { name: 'Cam Mechanisms',           tab: 'mech', checks: ['m6c1','m6c2','m6c3'],              icon: '⚙️' },
+    styr:    { name: 'Guides / Linear Units',    tab: 'mech', checks: ['m7c1','m7c2','m7c3'],              icon: '⚙️' },
+    // Pneumatics
+    pcyl:    { name: 'Pneum. cylinders',         tab: 'pneu', checks: ['p1c1','p1c2','p1c3','p1c4'],       icon: '💨' },
+    pvent:   { name: 'Pneum. valves',            tab: 'pneu', checks: ['p2c1','p2c2','p2c3','p2c4'],       icon: '💨' },
+    'prör':  { name: 'Pneum. pipes/hoses',       tab: 'pneu', checks: ['p3c1','p3c2','p3c3','p3c4'],       icon: '💨' },
+    preg:    { name: 'Pressure regulators',      tab: 'pneu', checks: ['p4c1','p4c2','p4c3'],              icon: '💨' },
+    // Hydraulics
+    hcyl:    { name: 'Hydraulic cylinders',      tab: 'hydr', checks: ['h1c1','h1c2','h1c3','h1c4'],       icon: '💧' },
+    hvent:   { name: 'Hydraulic valves',         tab: 'hydr', checks: ['h2c1','h2c2','h2c3','h2c4'],       icon: '💧' },
+    'hrör':  { name: 'Hydraul. hoses/pipes',     tab: 'hydr', checks: ['h3c1','h3c2','h3c3','h3c4'],       icon: '💧' },
+    hack:    { name: 'Accumulators',             tab: 'hydr', checks: ['h4c1','h4c2','h4c3'],              icon: '💧' },
+    // Electrical/Electronics
+    kabel:   { name: 'Cables / Conductors',      tab: 'elec', checks: ['e1c1','e1c2','e1c3','e1c4','e1c5'], icon: '⚡' },
+    rela:    { name: 'Relays / Contactors',      tab: 'elec', checks: ['e2c1','e2c2','e2c3','e2c4'],       icon: '⚡' },
+    sensor:  { name: 'Sensors / Transducers',    tab: 'elec', checks: ['e3c1','e3c2','e3c3','e3c4'],       icon: '⚡' },
+    pcb:     { name: 'Circuit Boards / PCB',     tab: 'elec', checks: ['e4c1','e4c2','e4c3','e4c4'],       icon: '⚡' },
+    kontakt: { name: 'Connectors / Plugs',       tab: 'elec', checks: ['e5c1','e5c2','e5c3','e5c4'],       icon: '⚡' },
+    sakr:    { name: 'Fuses',                    tab: 'elec', checks: ['e6c1','e6c2','e6c3'],              icon: '⚡' },
+};
+
+// ══════════ Tab switching ══════════
+function switchTab(tab) {
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector(`.tab-btn[data-tab="${tab}"]`).classList.add('active');
+    document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+    document.getElementById('panel-' + tab).classList.add('active');
+}
+
+// ══════════ Accordion ══════════
+function toggleComp(header) {
+    header.classList.toggle('open');
+    header.nextElementSibling.classList.toggle('open');
+}
+
+// ══════════ Status update per component ══════════
+function updateStatus(compId) {
+    const comp = components[compId];
+    if (!comp) return;
+    const total = comp.checks.length;
+    const checked = comp.checks.filter(id => document.getElementById(id).checked).length;
+
+    const statusEl = document.getElementById('status-' + compId);
+    const docEl = document.getElementById('doc-' + compId);
+    const textEl = statusEl.querySelector('.status-text');
+
+    if (checked === 0) {
+        statusEl.className = 'status-indicator status-none';
+        textEl.textContent = 'None checked yet';
+        docEl.classList.remove('show');
+    } else if (checked < total) {
+        statusEl.className = 'status-indicator status-partial';
+        textEl.textContent = `${checked} of ${total} requirements met – fault exclusion not yet possible`;
+        docEl.classList.remove('show');
+    } else {
+        statusEl.className = 'status-indicator status-ok';
+        textEl.textContent = 'All requirements met – fault exclusion possible ✓';
+        docEl.classList.add('show');
+    }
+
+    buildSummary();
+}
+
+// ══════════ Summary ══════════
+function buildSummary() {
+    const grid = document.getElementById('summaryGrid');
+    grid.innerHTML = '';
+    for (const [id, comp] of Object.entries(components)) {
+        const total = comp.checks.length;
+        const checked = comp.checks.filter(cid => document.getElementById(cid).checked).length;
+
+        let dotClass = 'sd-grey';
+        let label = 'Not started';
+        if (checked > 0 && checked < total) { dotClass = 'sd-yellow'; label = `${checked}/${total} criteria`; }
+        if (checked === total) { dotClass = 'sd-green'; label = 'Approved ✓'; }
+
+        const card = document.createElement('div');
+        card.className = 'summary-card';
+        card.style.cursor = 'pointer';
+        card.onclick = () => {
+            switchTab(comp.tab);
+            const section = document.getElementById('comp-' + id);
+            if (section) {
+                const header = section.querySelector('.comp-header');
+                if (!header.classList.contains('open')) toggleComp(header);
+                section.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+        };
+        card.innerHTML = `
+            <span class="sc-icon">${comp.icon}</span>
+            <div class="sc-info">
+                <div class="sc-name">${comp.name}</div>
+                <div class="sc-status">${label}</div>
+            </div>
+            <span class="summary-dot ${dotClass}"></span>
+        `;
+        grid.appendChild(card);
+    }
+}
+
+// ══════════ Search ══════════
+document.getElementById('searchInput').addEventListener('input', function() {
+    const q = this.value.toLowerCase().trim();
+    document.querySelectorAll('.comp-section').forEach(sec => {
+        const text = sec.getAttribute('data-comp').toLowerCase();
+        const innerText = sec.textContent.toLowerCase();
+        if (!q || text.includes(q) || innerText.includes(q)) {
+            sec.classList.remove('hidden');
+        } else {
+            sec.classList.add('hidden');
+        }
+    });
+    // If search matches in another tab – show all panels
+    if (q) {
+        document.querySelectorAll('.tab-panel').forEach(p => {
+            const hasVisible = p.querySelector('.comp-section:not(.hidden)');
+            p.style.display = hasVisible ? 'block' : 'none';
+        });
+    } else {
+        // Restore active tab
+        document.querySelectorAll('.tab-panel').forEach(p => p.style.display = '');
+        const activeTab = document.querySelector('.tab-btn.active');
+        if (activeTab) switchTab(activeTab.dataset.tab);
+    }
+});
+
+// ══════════ Init ══════════
+buildSummary();
+
+// ══════════ Disclaimer ══════════
+const disclaimerOverlay = document.getElementById('disclaimerOverlay');
+document.getElementById('disclaimerBtn').addEventListener('click', () => disclaimerOverlay.classList.add('visible'));
+document.getElementById('disclaimerClose').addEventListener('click', () => disclaimerOverlay.classList.remove('visible'));
+disclaimerOverlay.addEventListener('click', (e) => { if (e.target === disclaimerOverlay) disclaimerOverlay.classList.remove('visible'); });
+</script>
+</body>
+</html>

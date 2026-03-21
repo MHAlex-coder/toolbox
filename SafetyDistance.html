@@ -1,0 +1,1447 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Safety Distance Calculator — ISO 13855 &amp; ISO 13857</title>
+    <style>
+        :root {
+            --bg: #f5f6fa;
+            --card: #ffffff;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: #dbeafe;
+            --primary-lighter: #eff6ff;
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --danger-light: #fef2f2;
+            --success: #16a34a;
+            --success-light: #dcfce7;
+            --warning: #f59e0b;
+            --warning-light: #fff7ed;
+            --text: #1e293b;
+            --text-light: #64748b;
+            --border: #e2e8f0;
+            --shadow: 0 1px 3px rgba(0,0,0,.1), 0 1px 2px rgba(0,0,0,.06);
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: var(--bg); color: var(--text);
+            line-height: 1.5; padding: 0;
+        }
+        .topbar {
+            background: var(--card); border-bottom: 2px solid var(--primary);
+            padding: 12px 24px; display: flex; align-items: center; gap: 16px;
+            box-shadow: var(--shadow); position: sticky; top: 0; z-index: 100;
+        }
+        .topbar h1 { font-size: 1.3rem; color: var(--primary); white-space: nowrap; }
+        .topbar .spacer { flex: 1; }
+        .topbar-subtitle { font-size: 0.82rem; color: var(--text-light); }
+        .status-badge {
+            padding: 6px 18px; border-radius: 20px; font-weight: 700;
+            font-size: 0.88rem; text-transform: uppercase; letter-spacing: .5px;
+            transition: all .35s;
+        }
+        .status-safe { background: var(--success-light); color: var(--success); border: 2px solid var(--success); }
+        .status-danger { background: var(--danger-light); color: var(--danger); border: 2px solid var(--danger); animation: pulse-danger 1.2s infinite; }
+        @keyframes pulse-danger {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(220,38,38,.35); }
+            50% { box-shadow: 0 0 0 8px rgba(220,38,38,0); }
+        }
+        .tab-bar {
+            display: flex; gap: 0; background: var(--card);
+            border-bottom: 1px solid var(--border);
+            padding: 0 24px; overflow-x: auto;
+        }
+        .tab-btn {
+            padding: 12px 20px; border: none; background: none;
+            font-size: 0.9rem; font-weight: 600; color: var(--text-light);
+            cursor: pointer; border-bottom: 3px solid transparent;
+            white-space: nowrap; transition: all .2s;
+        }
+        .tab-btn:hover { color: var(--primary); background: var(--primary-lighter); }
+        .tab-btn.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .card {
+            background: var(--card); border-radius: 10px;
+            box-shadow: var(--shadow); padding: 24px; margin-bottom: 20px;
+        }
+        .card h2 {
+            font-size: 1.1rem; margin-bottom: 16px;
+            padding-bottom: 8px; border-bottom: 2px solid var(--border);
+            display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+        }
+        .card h2 .icon { font-size: 1.3rem; }
+        .card h3 { font-size: 0.95rem; margin: 16px 0 8px; color: var(--primary); }
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .form-grid.cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+        .form-grid.cols-1 { grid-template-columns: 1fr; }
+        .form-group { display: flex; flex-direction: column; }
+        .form-group.full { grid-column: 1 / -1; }
+        .form-group label {
+            font-size: 0.82rem; font-weight: 600; color: var(--text-light);
+            margin-bottom: 4px;
+        }
+        .form-group input, .form-group select {
+            padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px;
+            font-size: 0.92rem; font-family: inherit; transition: border-color .2s;
+        }
+        .form-group input:focus, .form-group select:focus {
+            outline: none; border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,.15);
+        }
+        .info-box {
+            background: var(--primary-lighter); border: 1px solid var(--primary-light);
+            border-radius: 6px; padding: 12px 16px; font-size: 0.85rem;
+            color: #1e40af; margin-bottom: 16px;
+        }
+        .info-box strong { display: block; margin-bottom: 4px; }
+        .info-box code { background: rgba(37,99,235,.1); padding: 1px 5px; border-radius: 3px; font-size: 0.88em; }
+        .warn-box {
+            background: var(--warning-light); border: 1px solid #fde68a;
+            border-radius: 6px; padding: 10px 14px; font-size: 0.82rem;
+            color: #92400e; margin-top: 10px;
+        }
+        .result-panel {
+            border-radius: 8px; padding: 16px 20px; margin-top: 12px;
+            font-size: 0.92rem; transition: all .3s;
+        }
+        .result-safe {
+            background: var(--success-light); border: 2px solid var(--success); color: #14532d;
+        }
+        .result-danger {
+            background: var(--danger-light); border: 2px solid var(--danger); color: #7f1d1d;
+        }
+        .result-panel .result-title { font-weight: 700; font-size: 1rem; margin-bottom: 4px; }
+        .result-panel .result-value { font-size: 1.6rem; font-weight: 800; }
+        .result-panel .result-detail { font-size: 0.84rem; margin-top: 4px; opacity: .85; }
+        .viz-container {
+            background: #f8fafc; border: 1px solid var(--border); border-radius: 8px;
+            overflow: hidden; position: relative; user-select: none;
+        }
+        .viz-container svg { display: block; width: 100%; }
+        .drag-hint {
+            position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%);
+            font-size: 0.75rem; color: var(--text-light); background: rgba(255,255,255,.85);
+            padding: 2px 10px; border-radius: 4px; pointer-events: none;
+        }
+        .data-table { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 8px; }
+        .data-table th, .data-table td {
+            padding: 4px 6px; border: 1px solid var(--border); text-align: center;
+        }
+        .data-table th { background: var(--primary-lighter); color: var(--primary); font-weight: 700; font-size: 0.74rem; }
+        .data-table tr:nth-child(even) td { background: #fafbfc; }
+        .data-table td.highlight { background: #fef9c3; font-weight: 700; }
+        .data-table td.not-allowed { background: #fee2e2; color: #991b1b; font-size: 0.7rem; }
+        .split { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .ref-tag {
+            display: inline-block; background: var(--primary-light); color: var(--primary);
+            font-size: 0.72rem; padding: 2px 8px; border-radius: 4px; font-weight: 600;
+            margin-left: 8px; vertical-align: middle;
+        }
+        .orientation-toggle {
+            display: flex; gap: 0; border: 2px solid var(--primary); border-radius: 8px;
+            overflow: hidden; margin-bottom: 12px;
+        }
+        .orientation-toggle button {
+            flex: 1; padding: 10px 16px; border: none; background: var(--card);
+            font-size: 0.88rem; font-weight: 600; color: var(--text-light);
+            cursor: pointer; transition: all .2s;
+        }
+        .orientation-toggle button.active {
+            background: var(--primary); color: #fff;
+        }
+        .orientation-toggle button:hover:not(.active) {
+            background: var(--primary-lighter);
+        }
+        .input-row {
+            display: flex; gap: 10px; align-items: center;
+        }
+        .input-row input[type="range"] {
+            flex: 1;
+        }
+        .mini-note {
+            margin-top: 6px; font-size: 0.76rem; color: var(--text-light);
+        }
+        .secondary-btn {
+            padding: 8px 10px; border: 1px solid var(--border); border-radius: 6px;
+            background: var(--card); color: var(--text); cursor: pointer; font: inherit;
+            white-space: nowrap;
+        }
+        .secondary-btn:hover {
+            background: var(--primary-lighter); border-color: var(--primary-light);
+        }
+        @media (max-width: 800px) {
+            .split { grid-template-columns: 1fr; }
+            .form-grid, .form-grid.cols-3 { grid-template-columns: 1fr; }
+            .topbar { flex-wrap: wrap; }
+            .topbar h1 { font-size: 1rem; }
+            .tab-btn { padding: 10px 12px; font-size: 0.82rem; }
+            .container { padding: 12px; }
+        }
+        .disclaimer-btn {
+            margin-left: auto; padding: 8px 16px; border: 2px solid var(--border);
+            border-radius: 8px; background: var(--card); color: var(--text-light);
+            font-size: 0.82rem; font-weight: 600; cursor: pointer; white-space: nowrap;
+        }
+        .disclaimer-btn:hover { background: var(--primary-lighter); border-color: var(--primary-light); color: var(--primary); }
+        .disclaimer-overlay {
+            display: none; position: fixed; inset: 0; z-index: 200;
+            background: rgba(0,0,0,.45); justify-content: center; align-items: center;
+        }
+        .disclaimer-overlay.visible { display: flex; }
+        .disclaimer-box {
+            background: var(--card); border-radius: 12px; box-shadow: 0 8px 30px rgba(0,0,0,.25);
+            max-width: 680px; width: 92%; max-height: 85vh; overflow-y: auto; padding: 32px;
+        }
+        .disclaimer-box h2 { font-size: 1.15rem; margin-bottom: 16px; color: var(--primary); }
+        .disclaimer-box h3 { font-size: 0.92rem; margin: 14px 0 4px; color: var(--text); }
+        .disclaimer-box p { font-size: 0.85rem; color: var(--text-light); line-height: 1.6; margin: 0 0 6px; }
+        .disclaimer-box .close-btn {
+            margin-top: 18px; padding: 10px 28px; border: none; border-radius: 8px;
+            background: var(--primary); color: #fff; font-weight: 700; cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .disclaimer-box .close-btn:hover { background: var(--primary-hover); }
+    </style>
+</head>
+<body>
+
+<!-- ═══════════════════ TOP BAR ═══════════════════ -->
+<div class="topbar">
+    <h1>⚙ Safety Distance Calculator</h1>
+    <span class="topbar-subtitle">ISO 13855:2024 · ISO 13857:2019</span>
+    <div class="spacer"></div>
+    <span id="globalBadge" class="status-badge status-safe">SAFE</span>
+</div>
+
+<!-- ═══════════════════ TAB BAR ═══════════════════ -->
+<div class="tab-bar">
+    <button class="tab-btn active" data-tab="tab-lc">🔦 Light Curtain / Scanner</button>
+    <button class="tab-btn" data-tab="tab-fg">🛡 Fixed Guards — Reaching Through</button>
+    <button class="tab-btn" data-tab="tab-ro">📏 Fixed Guards — Reaching Over</button>
+    <button class="disclaimer-btn" id="disclaimerBtn">⚠️ Disclaimer</button>
+</div>
+
+<!-- Disclaimer overlay -->
+<div class="disclaimer-overlay" id="disclaimerOverlay">
+    <div class="disclaimer-box">
+        <h2>⚠️ Important Notice &amp; Disclaimer</h2>
+        <h3>For Informational Use Only</h3>
+        <p>This tool is provided as a technical aid for estimation and educational purposes. The results and visualizations generated are based on idealized mathematical models and may not account for all real-world variables, such as mechanical wear, environmental conditions, or specific hardware configurations.</p>
+        <h3>No Warranty</h3>
+        <p>This software is provided "as is" without any warranties, express or implied, including but not limited to the warranties of accuracy, completeness, or fitness for a particular purpose.</p>
+        <h3>Limitation of Liability</h3>
+        <p>In no event shall the developer or provider be liable for any direct, indirect, incidental, or consequential damages (including, but not limited to, personal injury, equipment damage, or financial loss) arising from the use of, or inability to use, this tool or its results.</p>
+        <h3>Professional Validation Required</h3>
+        <p>Use of this tool does not constitute a safety certification or professional consultation. All safety-critical dimensions and configurations must be verified through physical measurements and validated by a qualified professional in accordance with current local regulations and international standards (e.g., ISO, EN, ANSI).</p>
+        <p style="margin-top:14px;font-weight:600;color:var(--text);">By using this tool, you acknowledge that you remain solely responsible for the final design and safety of the installation.</p>
+        <button class="close-btn" id="disclaimerClose">Close</button>
+    </div>
+</div>
+
+<div class="container">
+
+<!-- ╔═══════════════════════════════════════════════╗
+     ║  TAB 1 — LIGHT CURTAIN / SCANNER (ISO 13855) ║
+     ╚═══════════════════════════════════════════════╝ -->
+<div id="tab-lc" class="tab-content active">
+    <div class="info-box">
+        <strong>📖 ISO 13855:2024 — Positioning of safeguards with respect to approach speeds of parts of the human body</strong>
+        Minimum safety distance for electro-sensitive protective equipment (ESPE).<br>
+        <b>Vertical AOPD</b> (Clause 5.2): <code>S = (K × T) + C</code> — K auto-selects between 2000/1600 mm/s.<br>
+        <b>Horizontal AOPD</b> (Clause 5.5): <code>S = (K × T) + C<sub>RO</sub></code> — K = 1600 mm/s, C<sub>RO</sub> depends on detection height H.
+    </div>
+
+    <div class="split">
+        <div>
+            <div class="card">
+                <h2><span class="icon">📐</span> ESPE Configuration</h2>
+
+                <!-- Orientation toggle -->
+                <div class="orientation-toggle">
+                    <button id="lcOrientV" data-orient="vertical">▮ Vertical AOPD</button>
+                    <button id="lcOrientH" class="active" data-orient="horizontal">▬ Horizontal AOPD</button>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Overall stop time T (seconds)</label>
+                        <input type="number" id="lcT" value="0.25" min="0" step="0.01">
+                    </div>
+
+                    <div class="form-group" id="lcDGroup">
+                        <label>AOPD Resolution d (mm) <span class="ref-tag">ISO 13855</span></label>
+                        <select id="lcD">
+                            <option value="14" selected>14 mm</option>
+                            <option value="30">30 mm</option>
+                            <option value="40">40 mm</option>
+                            <option value="50">50 mm</option>
+                            <option value="70">70 mm</option>
+                        </select>
+                    </div>
+
+                    <!-- Vertical-only fields -->
+                    <div class="form-group" id="lcKGroup" style="display:none">
+                        <label>Approach speed K (mm/s)</label>
+                        <select id="lcKmode">
+                            <option value="auto">Auto (2000 / 1600)</option>
+                            <option value="2000">2000 mm/s (S ≤ 500 mm)</option>
+                            <option value="1600">1600 mm/s (S > 500 mm)</option>
+                        </select>
+                    </div>
+
+                    <!-- Horizontal-only field -->
+                    <div class="form-group" id="lcHGroup">
+                        <label>Detection zone height H (mm) <span class="ref-tag">Clause 5.5</span></label>
+                        <input type="number" id="lcH" value="300" min="0" max="1000" step="10">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Actual guard distance S (mm) <span class="ref-tag">from hazard zone to detection</span></label>
+                        <input type="number" id="lcActual" value="1601" min="0" step="10">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">📊</span> Calculation Result</h2>
+                <div id="lcResultPanel" class="result-panel result-safe">
+                    <div class="result-title">Minimum Safety Distance (S<sub>min</sub>)</div>
+                    <div class="result-value" id="lcSmin">—</div>
+                    <div class="result-detail" id="lcDetail"></div>
+                </div>
+            </div>
+
+            <div class="card" id="lcStepCard">
+                <h2><span class="icon">👣</span> Worst-case step into AOPD</h2>
+                <div class="form-group">
+                    <label>Intrusion point in the AOPD (mm from AOPD start)</label>
+                    <div class="input-row">
+                        <input type="range" id="lcStepIn" min="0" max="1601" step="10" value="0">
+                        <input type="number" id="lcStepInNumber" min="0" max="1601" step="10" value="0" style="width:110px">
+                        <button type="button" id="lcStepUseSuggested" class="secondary-btn">Use recommended</button>
+                    </div>
+                    <div class="mini-note" id="lcStepHint">0 mm = first beam in the AOPD. A larger value simulates the person stepping deeper before first detection.</div>
+                </div>
+                <h3>Typical first detection during step-in</h3>
+                <div class="mini-note">Practical simulation guide for first beam interruption based on AOPD height. This is not an ISO table.</div>
+                <div id="lcStepTableContainer"></div>
+            </div>
+        </div>
+
+        <div class="card">
+            <h2><span class="icon">🖼</span> Side View — Drag the guard<span class="ref-tag">Interactive</span></h2>
+            <div class="viz-container" id="lcVizContainer">
+                <svg id="lcSvg" viewBox="0 0 700 340"></svg>
+                <div class="drag-hint">← Drag the blue guard line horizontally →</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════╗
+     ║  TAB 2 — FIXED GUARDS: REACHING THROUGH      ║
+     ╚═══════════════════════════════════════════════╝ -->
+<div id="tab-fg" class="tab-content">
+    <div class="info-box">
+        <strong>📖 ISO 13857:2019, Table 4 — Reaching through regular openings</strong>
+        Safety distances to prevent reaching a hazard zone through openings in fixed guards (e.g., mesh, perforated plate).<br>
+        Persons aged ≥ 14 years. Square and slot openings.
+    </div>
+
+    <div class="split">
+        <div>
+            <div class="card">
+                <h2><span class="icon">📐</span> Opening Parameters</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Opening shape</label>
+                        <select id="fgShape">
+                            <option value="slot">Slot</option>
+                            <option value="square">Square</option>
+                            <option value="round">Round</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Opening size e (mm)</label>
+                        <input type="number" id="fgE" value="20" min="1" max="120" step="1">
+                    </div>
+                    <div class="form-group">
+                        <label>Actual distance to hazard (mm)</label>
+                        <input type="number" id="fgActual" value="200" min="0" step="10">
+                    </div>
+                </div>
+            </div>
+            <div class="card">
+                <h2><span class="icon">📊</span> Result</h2>
+                <div id="fgResultPanel" class="result-panel result-safe">
+                    <div class="result-title">Min. safety distance through opening (sr)</div>
+                    <div class="result-value" id="fgSr">—</div>
+                    <div class="result-detail" id="fgDetail"></div>
+                </div>
+            </div>
+        </div>
+        <div class="card">
+            <h2><span class="icon">📋</span> ISO 13857 Table 4<span class="ref-tag" id="fgShapeTag">Square</span></h2>
+            <div id="fgTableContainer"></div>
+            <div class="viz-container" style="margin-top: 16px">
+                <svg id="fgSvg" viewBox="0 0 700 300"></svg>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ╔═══════════════════════════════════════════════╗
+     ║  TAB 3 — FIXED GUARDS: REACHING OVER          ║
+     ╚═══════════════════════════════════════════════╝ -->
+<div id="tab-ro" class="tab-content">
+    <div class="info-box">
+        <strong>📖 ISO 13857:2019, Table 2 — Reaching over protective structures</strong>
+        Determines if a person can reach over a guard to access the hazard zone.<br>
+        Based on guard height <em>b</em>, hazard zone height <em>a</em>, and horizontal distance <em>c</em>. Persons aged ≥ 14 years.<br>
+        A value of 0 means the hazard is unreachable — no horizontal distance required.
+    </div>
+
+    <div class="split">
+        <div>
+            <div class="card">
+                <h2><span class="icon">📐</span> Guard &amp; Hazard Geometry</h2>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Guard height b (mm)</label>
+                        <select id="roB">
+                            <option value="1000">1000</option>
+                            <option value="1200">1200</option>
+                            <option value="1400">1400</option>
+                            <option value="1600">1600</option>
+                            <option value="1800">1800</option>
+                            <option value="2000" selected>2000</option>
+                            <option value="2200">2200</option>
+                            <option value="2400">2400</option>
+                            <option value="2500">2500</option>
+                            <option value="2700">2700</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Hazard zone height a (mm)</label>
+                        <select id="roA">
+                            <option value="2700">2700</option>
+                            <option value="2600">2600</option>
+                            <option value="2400">2400</option>
+                            <option value="2200">2200</option>
+                            <option value="2000">2000</option>
+                            <option value="1800">1800</option>
+                            <option value="1600">1600</option>
+                            <option value="1400" selected>1400</option>
+                            <option value="1200">1200</option>
+                            <option value="1000">1000</option>
+                            <option value="800">800</option>
+                            <option value="600">600</option>
+                            <option value="400">400</option>
+                            <option value="200">200</option>
+                            <option value="0">0 (floor level)</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Actual horizontal distance c (mm)</label>
+                        <input type="number" id="roActual" value="1100" min="0" step="50">
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2><span class="icon">📊</span> Result</h2>
+                <div id="roResultPanel" class="result-panel result-safe">
+                    <div class="result-title">Min. horizontal safety distance (c)</div>
+                    <div class="result-value" id="roSr">—</div>
+                    <div class="result-detail" id="roDetail"></div>
+                </div>
+            </div>
+        </div>
+
+        <div>
+            <div class="card">
+                <h2><span class="icon">🖼</span> Side View<span class="ref-tag">Drag guard ↔ &amp; hazard ↕</span></h2>
+                <div class="viz-container" id="roVizContainer">
+                    <svg id="roSvg" viewBox="0 0 700 420"></svg>
+                    <div class="drag-hint">Drag blue guard ↔ horizontally · Drag red hazard ↕ vertically</div>
+                </div>
+            </div>
+            <div class="card">
+                <h2><span class="icon">📋</span> ISO 13857 Table 2 — Full Reference<span class="ref-tag">Reaching Over</span></h2>
+                <div id="roTableContainer" style="overflow-x:auto"></div>
+                <div class="warn-box">
+                    ⚠ Always verify values against your copy of <b>ISO 13857:2019</b>.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</div><!-- /.container -->
+
+<script>
+(function(){
+"use strict";
+
+/* ────────────────────────────────────────────────
+   DISCLAIMER
+   ──────────────────────────────────────────────── */
+const disclaimerOverlay = document.getElementById('disclaimerOverlay');
+document.getElementById('disclaimerBtn').addEventListener('click', () => disclaimerOverlay.classList.add('visible'));
+document.getElementById('disclaimerClose').addEventListener('click', () => disclaimerOverlay.classList.remove('visible'));
+disclaimerOverlay.addEventListener('click', (e) => { if (e.target === disclaimerOverlay) disclaimerOverlay.classList.remove('visible'); });
+
+/* ────────────────────────────────────────────────
+   TAB SWITCHING
+   ──────────────────────────────────────────────── */
+document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        btn.classList.add('active');
+        document.getElementById(btn.dataset.tab).classList.add('active');
+    });
+});
+
+/* ────────────────────────────────────────────────
+   GLOBAL STATUS BADGE
+   ──────────────────────────────────────────────── */
+const globalBadge = document.getElementById('globalBadge');
+const statusStates = { lc: true, fg: true, ro: true };
+function updateGlobalBadge() {
+    const allSafe = statusStates.lc && statusStates.fg && statusStates.ro;
+    globalBadge.textContent = allSafe ? 'SAFE' : 'DANGER';
+    globalBadge.className = 'status-badge ' + (allSafe ? 'status-safe' : 'status-danger');
+}
+
+/* ════════════════════════════════════════════════
+   TAB 1 — LIGHT CURTAIN / SCANNER  (ISO 13855)
+   ════════════════════════════════════════════════ */
+const lcT       = document.getElementById('lcT');
+const lcD       = document.getElementById('lcD');
+const lcKmode   = document.getElementById('lcKmode');
+const lcActual  = document.getElementById('lcActual');
+const lcH       = document.getElementById('lcH');
+const lcDGroup  = document.getElementById('lcDGroup');
+const lcKGroup  = document.getElementById('lcKGroup');
+const lcHGroup  = document.getElementById('lcHGroup');
+const lcOrientV = document.getElementById('lcOrientV');
+const lcOrientH = document.getElementById('lcOrientH');
+const lcStepCard = document.getElementById('lcStepCard');
+const lcStepIn = document.getElementById('lcStepIn');
+const lcStepInNumber = document.getElementById('lcStepInNumber');
+const lcStepHint = document.getElementById('lcStepHint');
+const lcStepTableContainer = document.getElementById('lcStepTableContainer');
+const lcStepUseSuggested = document.getElementById('lcStepUseSuggested');
+
+let lcOrientation = 'horizontal';
+let lcStepManualOverride = false;
+
+const STEPIN_GUIDE = [
+    { min: 0, max: 120, strike: 'Toe / tip of foot', phase: 'Directly in the first beam', detect: '0-20 mm', suggested: 10 },
+    { min: 121, max: 250, strike: 'Foot / ankle', phase: 'Early step phase', detect: '20-60 mm', suggested: 40 },
+    { min: 251, max: 400, strike: 'Shin', phase: 'Normal walking', detect: '60-120 mm', suggested: 90 },
+    { min: 401, max: 600, strike: 'Knee / lower thigh', phase: 'Fast walking', detect: '120-180 mm', suggested: 140 },
+    { min: 601, max: 800, strike: 'Thigh / hip', phase: 'Long step in', detect: '180-260 mm', suggested: 210 },
+    { min: 801, max: 1000, strike: 'Pelvis / torso', phase: 'Deep entry', detect: '260-360 mm', suggested: 300 },
+];
+
+function clamp(value, min, max) {
+    return Math.min(max, Math.max(min, value));
+}
+
+function getStepGuideRow(height) {
+    return STEPIN_GUIDE.find(row => height >= row.min && height <= row.max) || STEPIN_GUIDE[STEPIN_GUIDE.length - 1];
+}
+
+function renderStepGuideTable(height) {
+    const current = getStepGuideRow(height);
+    let html = `<table class="data-table"><thead><tr>
+        <th>AOPD height H</th><th>Typical first strike</th><th>Step phase</th><th>First detection</th><th>Recommended intrusion point</th>
+    </tr></thead><tbody>`;
+    for (const row of STEPIN_GUIDE) {
+        const active = row === current ? ' class="highlight"' : '';
+        html += `<tr>
+            <td${active}>${row.min}-${row.max} mm</td>
+            <td${active}>${row.strike}</td>
+            <td${active}>${row.phase}</td>
+            <td${active}>${row.detect}</td>
+            <td${active}>approx. ${row.suggested} mm</td>
+        </tr>`;
+    }
+    html += `</tbody></table>`;
+    lcStepTableContainer.innerHTML = html;
+}
+
+function getSuggestedStepValue(height, actual, curtainLength) {
+    const guide = getStepGuideRow(height);
+    return clamp(guide.suggested, 0, Math.max(0, Math.min(actual, curtainLength)));
+}
+
+function applySuggestedStepValue(height, actual, curtainLength, force = false) {
+    if (lcOrientation !== 'horizontal') return 0;
+    const suggested = getSuggestedStepValue(height, actual, curtainLength);
+    if (!force && lcStepManualOverride) {
+        return syncStepInputs(lcStepIn, Math.max(0, Math.ceil(actual)));
+    }
+    lcStepManualOverride = false;
+    lcStepIn.value = String(suggested);
+    lcStepInNumber.value = String(suggested);
+    return syncStepInputs(lcStepIn, Math.max(0, Math.ceil(actual)));
+}
+
+function setStepControlsVisibility() {
+    const show = lcOrientation === 'horizontal';
+    lcStepCard.style.display = show ? '' : 'none';
+}
+
+function syncStepInputs(source, maxValue) {
+    const parsed = parseFloat(source.value);
+    const stepValue = clamp(Number.isFinite(parsed) ? parsed : 0, 0, maxValue);
+    lcStepIn.max = String(maxValue);
+    lcStepInNumber.max = String(maxValue);
+    lcStepIn.value = String(stepValue);
+    lcStepInNumber.value = String(stepValue);
+    return stepValue;
+}
+
+function updateStepHint(curtainLength, stepValue, height) {
+    const guide = getStepGuideRow(height);
+    if (stepValue > curtainLength) {
+        lcStepHint.textContent = `ERROR: The person has stepped past the entire AOPD without detection. AOPD length is ${Math.max(0, Math.ceil(curtainLength))} mm.`;
+        return;
+    }
+    lcStepHint.textContent = `For H = ${height} mm, the first strike is typically ${guide.strike.toLowerCase()} during ${guide.phase.toLowerCase()}. Recommended start point is approx. ${getSuggestedStepValue(height, Number(lcActual.value) || 0, curtainLength)} mm.`;
+}
+
+/* Orientation toggle */
+[lcOrientV, lcOrientH].forEach(btn => {
+    btn.addEventListener('click', () => {
+        lcOrientV.classList.remove('active');
+        lcOrientH.classList.remove('active');
+        btn.classList.add('active');
+        lcOrientation = btn.dataset.orient;
+        const isVert = lcOrientation === 'vertical';
+        lcKGroup.style.display = isVert ? '' : 'none';
+        lcHGroup.style.display = isVert ? 'none' : '';
+        setStepControlsVisibility();
+        calcLC();
+    });
+});
+
+/**
+ * Intrusion distance C for VERTICAL AOPD
+ * ISO 13855:2024, Table 3 / Clause 5.2
+ *  d ≤ 14 mm  → C = 0
+ *  14 < d ≤ 40 mm → C = 8 × (d − 14)
+ *  d > 40 mm  → C = 850
+ */
+function calcCvert(d) {
+    if (d <= 14) return 0;
+    if (d <= 40) return 8 * (d - 14);
+    return 850;
+}
+
+/**
+ * CRO for HORIZONTAL AOPD
+ * Dynamic: C = 1200 − 0.4 × H, floor 850 mm
+ */
+function calcCRO(H) {
+    return Math.max(Math.ceil(1200 - 0.4 * H), 850);
+}
+
+/**
+ * Validate AOPD resolution (d) against detection height (H).
+ * Returns a warning string or empty string.
+ */
+function validateResolutionVsHeight(d, H) {
+    if (H < 300 && d > 50) {
+        return 'Insufficient resolution for this height. Max 50 mm required below 300 mm height.';
+    }
+    if (H >= 300 && d > 70) {
+        return 'Insufficient resolution. Max 70 mm required at 300 mm height or above.';
+    }
+    return '';
+}
+
+function calcLC() {
+    const T = parseFloat(lcT.value) || 0;
+    const actual = parseFloat(lcActual.value) || 0;
+    let K, S, C, clauseRef;
+    let safe;
+
+    if (lcOrientation === 'vertical') {
+        /* ── Vertical AOPD (Clause 5.2) ── */
+        const d = parseFloat(lcD.value) || 14;
+        C = calcCvert(d);
+        const mode = lcKmode.value;
+
+        if (mode === 'auto') {
+            S = 2000 * T + C;
+            K = 2000;
+            if (S > 500) {
+                K = 1600;
+                S = 1600 * T + C;
+            }
+        } else {
+            K = parseInt(mode);
+            S = K * T + C;
+        }
+        /* Minimum S per clause 5.2: 100 mm for d ≤ 40, else S ≥ 1100 */
+        if (d <= 40) S = Math.max(S, 100);
+        else S = Math.max(S, 1100);
+
+        S = Math.ceil(S);
+        clauseRef = `Vertical AOPD · K = ${K} mm/s · T = ${T} s · C = ${C} mm (d = ${d} mm) · Clause 5.2`;
+        safe = actual >= S;
+    } else {
+        /* ── Horizontal AOPD (Clause 5.5) ── */
+        const H = parseFloat(lcH.value) || 300;
+        const d = parseFloat(lcD.value) || 14;
+        K = 1600;
+        C = calcCRO(H);
+        S = K * T + C;
+        S = Math.max(Math.ceil(S), C); // S ≥ CRO always
+        K_global = K;
+        C_global = C;
+        clauseRef = `Horizontal AOPD · K = ${K} mm/s · T = ${T} s · C<sub>RO</sub> = ${C} mm (H = ${H} mm, d = ${d} mm) · Clause 5.5`;
+
+        /* Resolution vs Height validation */
+        const resWarning = validateResolutionVsHeight(d, H);
+        if (resWarning) {
+            clauseRef += `<div style="margin-top:6px;padding:6px 10px;background:var(--warning-light);border-left:4px solid var(--warning);border-radius:4px;color:#92400e;font-weight:600;">⚠️ ${resWarning}</div>`;
+        }
+        renderStepGuideTable(H);
+        setStepControlsVisibility();
+
+        const sBrake = K * T;
+        const defaultCurtainLength = Math.max(0, actual - sBrake);
+        if (lcCurtainLengthFrozen == null) {
+            lcCurtainLengthFrozen = defaultCurtainLength;
+        }
+        const curtainLength = clamp(lcCurtainLengthFrozen, 0, actual);
+        lcCurtainLengthFrozen = curtainLength;
+        const stepMax = Math.max(0, Math.ceil(actual));
+        const stepValue = applySuggestedStepValue(H, actual, curtainLength);
+        updateStepHint(curtainLength, stepValue, H);
+
+        const detectionPoint = actual - stepValue;
+        const steppedBehind = stepValue > curtainLength;
+        const restDistance = (actual - stepValue) - sBrake;
+        const margin = restDistance - C;
+        safe = actual >= S && !steppedBehind && restDistance >= C;
+    }
+
+    statusStates.lc = safe;
+    updateGlobalBadge();
+
+    const panel = document.getElementById('lcResultPanel');
+    panel.className = 'result-panel ' + (safe ? 'result-safe' : 'result-danger');
+    document.getElementById('lcSmin').textContent = S + ' mm';
+
+    const baseStatusText = safe
+        ? `<strong>≥ ${S} mm ✓</strong>`
+        : (actual < S
+            ? `<strong>< ${S} mm ✗ — Move guard further from hazard!</strong>`
+            : `<strong>Nominally ≥ ${S} mm, but worst-case step-in creates risk ✗</strong>`);
+
+    let detailHtml = clauseRef + `<br>Actual: <strong>${actual} mm</strong> — ` + baseStatusText;
+
+    if (lcOrientation === 'horizontal') {
+        const H = parseFloat(lcH.value) || 300;
+        const sBrake = K * T; // Coast-down / stopping distance
+        const stepValue = syncStepInputs(lcStepIn, Math.max(0, Math.ceil(actual)));
+        const detectionPoint = actual - stepValue;
+        const curtainLength = clamp(lcCurtainLengthFrozen == null ? Math.max(0, actual - sBrake) : lcCurtainLengthFrozen, 0, actual);
+        const curtainEndDistance = Math.max(0, actual - curtainLength);
+        const steppedBehind = stepValue > curtainLength;
+        const restDistance = (actual - stepValue) - sBrake;
+        const margin = restDistance - C;
+        const nominalSafe = actual >= S;
+
+        if (!nominalSafe) {
+            const missingDistance = S - actual;
+            detailHtml += `<div style="margin-top:8px;padding:8px 12px;background:var(--danger-light);border-left:4px solid var(--danger);border-radius:4px;">
+                <strong>⚠️ WARNING: The machine cannot stop in time!</strong><br>
+                You are missing <strong>${missingDistance} mm</strong> of detection zone.
+            </div>`;
+        }
+
+        const gapToMachine = (actual - stepValue) - sBrake;
+        const inreach = C - gapToMachine;
+
+        if (steppedBehind) {
+            detailHtml += `<div style="margin-top:8px;padding:8px 12px;background:var(--danger-light);border-left:4px solid var(--danger);border-radius:4px;">
+                <strong>ERROR:</strong> The person has stepped past the entire AOPD without detection!<br>
+                Intrusion point is <strong>${Math.ceil(stepValue)} mm</strong>, but AOPD length is only <strong>${Math.ceil(curtainLength)} mm</strong>.
+            </div>`;
+        } else if (inreach > 0) {
+            detailHtml += `<div style="margin-top:8px;padding:8px 12px;background:var(--danger-light);border-left:4px solid var(--danger);border-radius:4px;">
+                <strong>⚠️ Worst Case:</strong> Detection occurs only at <strong>${Math.ceil(detectionPoint)} mm</strong> from the machine.<br>
+                When the machine has stopped, the person is <strong>${Math.ceil(restDistance)} mm</strong> from the hazard, but reach distance is <strong>${C} mm</strong>.<br>
+                The operator reaches <strong>${Math.ceil(inreach)} mm</strong> into the hazard zone!<br>
+                <strong>RISK OF INJURY!</strong> Presence detection or sequential reset is required.
+            </div>`;
+        }
+
+        const coastCritical = steppedBehind || inreach > 0;
+        detailHtml += `<div style="margin-top:8px;padding:8px 12px;background:${coastCritical ? 'var(--danger-light)' : 'var(--warning-light)'};border-left:4px solid ${coastCritical ? 'var(--danger)' : 'var(--warning)'};border-radius:4px;">
+            <strong>${coastCritical ? '🔴' : '🚧'} Coast-down Zone${coastCritical ? ' — CRITICAL' : ''}:</strong> S<sub>brake</sub> = K × T = ${K} × ${T} = <strong>${Math.ceil(sBrake)} mm</strong><br>
+            The  inner edge is now <strong>${Math.ceil(curtainEndDistance)} mm</strong> from the machine. Drag the red handle to move the same AOPD farther out.<br>
+            Coast-down starts at intrusion point <strong>${Math.ceil(stepValue)} mm</strong> into the AOPD, i.e. at <strong>${Math.ceil(detectionPoint)} mm</strong> from the machine.<br>
+            Inreach = C − (S<sub>det</sub> −AOPD S<sub>brake</sub>) = ${C} − (${Math.ceil(detectionPoint)} − ${Math.ceil(sBrake)}) = <strong>${Math.ceil(inreach)} mm</strong>
+            ${coastCritical ? ' → the operator reaches into the machine!' : ' → safe, the operator cannot reach the machine.'}
+        </div>`;
+
+        const marginColor = margin < 0 ? 'var(--danger)' : 'var(--success)';
+        const marginBg = margin < 0 ? 'var(--danger-light)' : 'var(--success-light)';
+        detailHtml += `<div style="margin-top:8px;padding:8px 12px;background:${marginBg};border-left:4px solid ${marginColor};border-radius:4px;">
+            <strong>📍 Remaining distance after stop:</strong> When the machine has stopped, the person is <strong>${Math.ceil(restDistance)} mm</strong> from the hazard.<br>
+            With reach distance C (<strong>${C} mm</strong>), the margin is <strong>${Math.ceil(margin)} mm</strong>.
+        </div>`;
+
+        // T_req: max tillåten stopptid = (ActualS - C) / K
+        const devLabel = 'AOPD';
+        const devDefinite = 'the AOPD';
+        if (actual < C) {
+            detailHtml += `<div style="margin-top:8px;padding:8px 12px;background:var(--danger-light);border-left:4px solid var(--danger);border-radius:4px;">
+                <strong>🔧 Brake optimization:</strong> The AOPD is too close - reach distance (<strong>${C} mm</strong>) is greater than the full distance (<strong>${actual} mm</strong>).
+            </div>`;
+        } else {
+            const T_req = (actual - C) / K;
+            if (T <= T_req) {
+                detailHtml += `<div style="margin-top:8px;padding:8px 12px;background:var(--primary-lighter);border-left:4px solid var(--primary);border-radius:4px;">
+                    <strong>🔧 Brake optimization:</strong> T<sub>req</sub> = (${actual} − ${C}) / ${K} = <strong>${T_req.toFixed(4)} s</strong>.<br>
+                    Current stopping time (${T} s) ≤ T<sub>req</sub> (${T_req.toFixed(4)} s) - stopping time is sufficient for the distance, but make sure ${devDefinite} covers all the way to the machine.
+                </div>`;
+            } else {
+                detailHtml += `<div style="margin-top:8px;padding:8px 12px;background:var(--primary-lighter);border-left:4px solid var(--primary);border-radius:4px;">
+                    <strong>🔧 Brake optimization:</strong> To approve the current ${devLabel} (${actual} mm), the total stopping time must be at most <strong>${T_req.toFixed(4)} s</strong>.<br>
+                    T<sub>req</sub> = (${actual} − ${C}) / ${K} = ${T_req.toFixed(4)} s. Current T = ${T} s > T<sub>req</sub> - <strong>the brake is too slow!</strong>
+                </div>`;
+            }
+        }
+    }
+
+    document.getElementById('lcDetail').innerHTML = detailHtml;
+    if (lcOrientation === 'horizontal') {
+        const T = parseFloat(lcT.value) || 0;
+        const H_val = parseFloat(lcH.value) || 300;
+        const stepValue = syncStepInputs(lcStepIn, Math.max(0, Math.ceil(actual)));
+        drawLcSvgHoriz(S, actual, safe, K_global, T, C_global, H_val, stepValue);
+    } else {
+        drawLcSvg(S, actual, safe);
+    }
+}
+
+// Store K and C for SVG drawing in horizontal mode
+let K_global = 1600, C_global = 1200;
+
+/* ── LC SVG ──────────────────────────────────── */
+const lcSvg = document.getElementById('lcSvg');
+let lcDragging = false;
+let lcDragHandle = null;
+let lcCurtainLengthFrozen = null;
+
+/* ── Horizontal AOPD SVG ─────────────────────── */
+function drawLcSvgHoriz(Smin, actual, safe, K, T, C, detH, stepValue) {
+    const isScanner = false;  // Only light curtain mode
+    const W = 700, H = 400;
+    const floor = H - 50;
+    const topMargin = 35;
+    const leftPad = 60;   // space for scale labels
+    const rightPad = 70;   // room for hazard box at right edge
+    const drawW = W - leftPad - rightPad;
+
+    // Max distance to show (at least Smin + 200)
+    const maxDist = Math.max(Smin + 200, actual + 400, 2500);
+    const hScale = drawW / maxDist;  // px per mm
+
+    // Hazard zone at X=0 → right side of drawing
+    const hazardRightPx = leftPad + drawW;  // X=0 position
+    const toX = (mm) => hazardRightPx - mm * hScale;  // convert mm-from-hazard to px
+
+    const machineW = 60, machineH = 140;
+    const machineX = toX(0) - machineW / 2;
+    const machineY = floor - machineH;
+
+    const sBrake = Math.ceil(K * T);  // coast-down distance
+    const curtainLength = isScanner
+        ? Math.max(0, actual - sBrake)
+        : clamp(lcCurtainLengthFrozen == null ? Math.max(0, actual - sBrake) : lcCurtainLengthFrozen, 0, actual);
+    const curtainEndDistance = Math.max(0, actual - curtainLength);
+    const curtainStartX = toX(actual);     // where detection starts (far from hazard)
+    const curtainEndX = toX(curtainEndDistance);       // where curtain ends (near hazard)
+    const intrusion = clamp(stepValue || 0, 0, Math.max(0, actual));
+    const detectionPoint = actual - intrusion;
+    const detectionX = toX(Math.max(0, detectionPoint));
+    const dynamicCoastStartX = toX(Math.max(0, detectionPoint));
+    const dynamicCoastEndX = toX(Math.max(0, detectionPoint - sBrake));
+    const dynamicCoastWidth = dynamicCoastEndX - dynamicCoastStartX;
+    const steppedBehind = !isScanner && intrusion > Math.max(0, curtainLength);
+    const restDistance = detectionPoint - sBrake;
+    const margin = restDistance - C;
+    const sMinLineX = toX(Smin);
+
+    const vScale = (floor - topMargin - 30) / 1500;
+    const beamY = floor - detH * vScale;
+
+    const guardColor = safe ? '#2563eb' : '#dc2626';
+
+    // Coast-down zone: 0 to sBrake (hatched red)
+    const coastStartX = toX(sBrake);
+    const coastEndX = toX(0);
+    const coastWidth = coastEndX - coastStartX;
+    const gapToMachine = detectionPoint - sBrake;
+    const inreach = C - gapToMachine;
+    const coastCritical = !isScanner && (steppedBehind || inreach > 0);
+
+    // Scale ticks
+    const tickStep = maxDist <= 2000 ? 200 : 500;
+    let scaleTicks = '';
+    for (let mm = 0; mm <= maxDist; mm += tickStep) {
+        const x = toX(mm);
+        if (x < leftPad - 5 || x > W - 10) continue;
+        scaleTicks += `<line x1="${x}" y1="${floor}" x2="${x}" y2="${floor + 6}" stroke="#94a3b8" stroke-width="1"/>`;
+        scaleTicks += `<text x="${x}" y="${floor + 18}" text-anchor="middle" font-size="8" fill="#94a3b8">${mm}</text>`;
+    }
+
+    // Reach arc from operator to hazard
+    const personX = detectionX - 18;
+    const reachEndX = toX(Math.max(0, restDistance - C));
+    const reachPastBrake = !steppedBehind && inreach > 0;
+    const coastLabelX = Math.max(leftPad + 130, Math.min(W - 130, Math.min(dynamicCoastStartX, dynamicCoastEndX) + Math.abs(dynamicCoastWidth) / 2));
+    const intrusionLabelX = Math.max(leftPad + 90, detectionX);
+
+    const svg = `
+    <rect x="0" y="0" width="${W}" height="${H}" fill="#f8fafc"/>
+
+    <!-- Floor & scale -->
+    <line x1="${leftPad - 10}" y1="${floor}" x2="${hazardRightPx + 40}" y2="${floor}" stroke="#94a3b8" stroke-width="2"/>
+    <text x="${W / 2}" y="${floor + 30}" text-anchor="middle" font-size="10" fill="#94a3b8">Distance from hazard zone (mm)</text>
+    ${scaleTicks}
+
+    <!-- Hazard Zone at X=0 (front face at toX(0), extends right) -->
+    <rect x="${hazardRightPx}" y="${machineY}" width="40" height="${machineH}" rx="4" fill="#dc2626" opacity=".85"/>
+    <text x="${hazardRightPx + 20}" y="${machineY + machineH / 2 - 6}" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">Hazard</text>
+    <text x="${hazardRightPx + 20}" y="${machineY + machineH / 2 + 8}" text-anchor="middle" font-size="9" fill="#fff">Zone (0)</text>
+
+    <!-- Coast-down Zone / Scanner zone -->
+    <defs>
+        <pattern id="hatchRed" patternUnits="userSpaceOnUse" width="8" height="8" patternTransform="rotate(45)">
+            <line x1="0" y1="0" x2="0" y2="8" stroke="#dc2626" stroke-width="2.5" opacity="0.35"/>
+        </pattern>
+        <marker id="arrL" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><path d="M8,0 L0,3 L8,6" fill="#475569"/></marker>
+        <marker id="arrR" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#475569"/></marker>
+    </defs>
+    ${isScanner ? `
+    <!-- Scanner: filled safety zone from actual to hazard -->
+    <rect x="${curtainStartX}" y="${machineY}" width="${Math.abs(hazardRightPx - curtainStartX)}" height="${machineH}" fill="${safe ? 'rgba(37,99,235,.06)' : 'rgba(220,38,38,.08)'}"/>
+    ` : (coastWidth > 0 ? `
+    <rect x="${Math.min(dynamicCoastStartX, dynamicCoastEndX)}" y="${machineY - 10}" width="${Math.abs(dynamicCoastWidth)}" height="${machineH + 10}" fill="url(#hatchRed)" rx="3"/>
+    <rect x="${Math.min(dynamicCoastStartX, dynamicCoastEndX)}" y="${machineY - 10}" width="${Math.abs(dynamicCoastWidth)}" height="${machineH + 10}" fill="${coastCritical ? 'rgba(220,38,38,.15)' : 'rgba(220,38,38,.06)'}" stroke="#dc2626" stroke-width="${coastCritical ? '2' : '1'}" stroke-dasharray="4,2" rx="3"/>
+    <text x="${coastLabelX}" y="${machineY + 14}" text-anchor="middle" font-size="8" fill="#dc2626" font-weight="700">${coastCritical ? 'CRITICAL: ' : ''}Coast-down from intrusion (${sBrake} mm)</text>
+    ` : '')}
+
+    <!-- S_min line -->
+    <line x1="${sMinLineX}" y1="${topMargin + 10}" x2="${sMinLineX}" y2="${floor}" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="6,4"/>
+    <text x="${sMinLineX}" y="${topMargin + 6}" text-anchor="middle" font-size="10" fill="#16a34a" font-weight="700">S_min = ${Smin} mm</text>
+
+    ${isScanner ? `
+    <!-- Scanner: single vertical detection line at actual distance -->
+    <line class="lc-guard" x1="${curtainStartX}" y1="${machineY - 20}" x2="${curtainStartX}" y2="${floor}" stroke="${guardColor}" stroke-width="4" style="cursor:ew-resize"/>
+    <rect x="${curtainStartX - 5}" y="${machineY - 30}" width="10" height="10" rx="2" fill="${guardColor}" style="cursor:ew-resize" class="lc-guard"/>
+    <text x="${curtainStartX}" y="${machineY - 38}" text-anchor="middle" font-size="10" fill="${guardColor}" font-weight="600">Scanner</text>
+    ` : `
+    <!-- Light curtain (detection zone) -->
+    <line class="lc-guard" x1="${curtainStartX}" y1="${beamY}" x2="${curtainEndX}" y2="${beamY}" stroke="${guardColor}" stroke-width="4" stroke-dasharray="8,4" style="cursor:ew-resize"/>
+    <line x1="${curtainStartX}" y1="${beamY - 6}" x2="${curtainStartX}" y2="${beamY + 6}" stroke="${guardColor}" stroke-width="3"/>
+    <line x1="${curtainEndX}" y1="${beamY - 6}" x2="${curtainEndX}" y2="${beamY + 6}" stroke="${guardColor}" stroke-width="3"/>
+    <rect x="${curtainStartX - 5}" y="${beamY - 14}" width="10" height="10" rx="2" fill="${guardColor}" style="cursor:ew-resize" class="lc-guard lc-guard-start"/>
+    <rect x="${curtainEndX - 5}" y="${beamY - 14}" width="10" height="10" rx="2" fill="#ef4444" style="cursor:ew-resize" class="lc-guard lc-guard-end"/>
+    <text x="${(curtainStartX + curtainEndX) / 2}" y="${beamY - 14}" text-anchor="middle" font-size="9" fill="${guardColor}" font-weight="600">AOPD (${Math.max(0, curtainLength)} mm)</text>
+    <text x="${curtainStartX}" y="${beamY + 14}" text-anchor="middle" font-size="7" fill="${guardColor}">${actual} mm</text>
+    <text x="${curtainEndX}" y="${beamY + 14}" text-anchor="middle" font-size="7" fill="#ef4444">${Math.ceil(curtainEndDistance)} mm</text>
+    <text x="${curtainEndX}" y="${beamY - 26}" text-anchor="middle" font-size="7" fill="#ef4444">Move same AOPD</text>
+    <line x1="${detectionX}" y1="${beamY - 18}" x2="${detectionX}" y2="${floor}" stroke="${steppedBehind ? '#dc2626' : '#0f766e'}" stroke-width="2" stroke-dasharray="5,4"/>
+    <text x="${intrusionLabelX}" y="${beamY - 30}" text-anchor="middle" font-size="8" fill="${steppedBehind ? '#dc2626' : '#0f766e'}" font-weight="700">${steppedBehind ? 'No detection' : `Intrusion ${Math.ceil(intrusion)} mm`}</text>
+    `}
+
+    <!-- Actual distance dimension -->
+    <line x1="${curtainStartX}" y1="${floor - 12}" x2="${hazardRightPx}" y2="${floor - 12}" stroke="#475569" stroke-width="1" marker-start="url(#arrL)" marker-end="url(#arrR)"/>
+    <text x="${(curtainStartX + hazardRightPx) / 2}" y="${floor - 18}" text-anchor="middle" font-size="8" fill="#475569" font-weight="600">S = ${actual} mm</text>
+
+    <!-- Person silhouette at landing point -->
+    <g transform="translate(${Math.max(personX - 15, leftPad)}, ${floor - 145})" opacity=".62">
+        <circle cx="15" cy="10" r="12" fill="${steppedBehind ? '#dc2626' : '#0f766e'}"/>
+        <line x1="15" y1="22" x2="15" y2="80" stroke="${steppedBehind ? '#dc2626' : '#0f766e'}" stroke-width="3"/>
+        <line x1="15" y1="40" x2="0" y2="65" stroke="${steppedBehind ? '#dc2626' : '#0f766e'}" stroke-width="2.5"/>
+        <line x1="15" y1="40" x2="30" y2="65" stroke="${steppedBehind ? '#dc2626' : '#0f766e'}" stroke-width="2.5"/>
+        <line x1="15" y1="80" x2="5" y2="125" stroke="${steppedBehind ? '#dc2626' : '#0f766e'}" stroke-width="2.5"/>
+        <line x1="15" y1="80" x2="25" y2="125" stroke="${steppedBehind ? '#dc2626' : '#0f766e'}" stroke-width="2.5"/>
+    </g>
+    <line x1="${detectionX}" y1="${floor - 6}" x2="${detectionX}" y2="${floor - 40}" stroke="${steppedBehind ? '#dc2626' : '#0f766e'}" stroke-width="2" marker-end="url(#arrR)"/>
+
+    <!-- Reach arc -->
+    ${!isScanner && reachPastBrake ? `
+    <line x1="${dynamicCoastEndX}" y1="${beamY + 28}" x2="${toX(Math.max(0, restDistance - C))}" y2="${beamY + 28}" stroke="#f59e0b" stroke-width="2" stroke-dasharray="4,3" marker-end="url(#arrR)"/>
+    <text x="${(dynamicCoastEndX + reachEndX) / 2}" y="${beamY + 22}" text-anchor="middle" font-size="8" fill="#b45309" font-weight="600">Margin after stop: ${Math.ceil(margin)} mm</text>
+    ` : ''}
+    `;
+    lcSvg.innerHTML = svg;
+    lcSvg.setAttribute('viewBox', '0 0 700 400');
+    lcSvg._hazardRightPx = hazardRightPx;
+    lcSvg._hScale = hScale;
+    lcSvg._curtainLength = curtainLength;
+    lcSvg._curtainEndDistance = curtainEndDistance;
+}
+
+function drawLcSvg(Smin, actual, safe) {
+    const W = 700, H = 340;
+    const floor = H - 40;
+    const machineW = 90, machineH = 150;
+    const machineX = W - 60 - machineW;
+    const machineY = floor - machineH;
+    const scale = (machineX - 100) / 2500;
+    const guardX = machineX - Math.max(0, actual * scale);
+    const sMinX  = machineX - Math.max(0, Smin * scale);
+    const guardColor = safe ? '#2563eb' : '#dc2626';
+
+    const guardGfx = `
+        <line class="lc-guard" x1="${guardX}" y1="${machineY - 20}" x2="${guardX}" y2="${floor}" stroke="${guardColor}" stroke-width="4" style="cursor:ew-resize"/>
+        <rect x="${guardX - 5}" y="${machineY - 30}" width="10" height="10" rx="2" fill="${guardColor}" style="cursor:ew-resize" class="lc-guard"/>
+        <text x="${guardX}" y="${machineY - 38}" text-anchor="middle" font-size="10" fill="${guardColor}" font-weight="600">Vertical ESPE</text>`;
+
+    const svg = `
+    <rect x="0" y="0" width="${W}" height="${H}" fill="#f8fafc"/>
+    <line x1="20" y1="${floor}" x2="${W-20}" y2="${floor}" stroke="#94a3b8" stroke-width="2"/>
+    <text x="${W/2}" y="${floor+20}" text-anchor="middle" font-size="11" fill="#94a3b8">Floor</text>
+    <rect x="${machineX}" y="${machineY}" width="${machineW}" height="${machineH}" rx="4" fill="#dc2626" opacity=".85"/>
+    <text x="${machineX + machineW/2}" y="${machineY + machineH/2 - 6}" text-anchor="middle" font-size="11" fill="#fff" font-weight="700">Hazard</text>
+    <text x="${machineX + machineW/2}" y="${machineY + machineH/2 + 10}" text-anchor="middle" font-size="10" fill="#fff">Zone</text>
+    <line x1="${sMinX}" y1="${machineY - 10}" x2="${sMinX}" y2="${floor}" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="6,4"/>
+    <text x="${sMinX}" y="${machineY - 16}" text-anchor="middle" font-size="10" fill="#16a34a" font-weight="600">S_min = ${Smin} mm</text>
+    <rect x="${Math.min(guardX, machineX)}" y="${machineY}" width="${Math.abs(machineX - guardX)}" height="${machineH}" fill="${safe ? 'rgba(37,99,235,.06)' : 'rgba(220,38,38,.08)'}"/>
+    ${guardGfx}
+    <line x1="${guardX}" y1="${floor - 15}" x2="${machineX}" y2="${floor - 15}" stroke="#475569" stroke-width="1" marker-start="url(#arrL)" marker-end="url(#arrR)"/>
+    <text x="${(guardX + machineX)/2}" y="${floor - 22}" text-anchor="middle" font-size="11" fill="#475569" font-weight="600">${actual} mm</text>
+    <g transform="translate(${Math.max(guardX - 55, 25)}, ${floor - 145})" opacity=".45">
+        <circle cx="15" cy="10" r="12" fill="#94a3b8"/>
+        <line x1="15" y1="22" x2="15" y2="80" stroke="#94a3b8" stroke-width="3"/>
+        <line x1="15" y1="40" x2="0" y2="65" stroke="#94a3b8" stroke-width="2.5"/>
+        <line x1="15" y1="40" x2="30" y2="65" stroke="#94a3b8" stroke-width="2.5"/>
+        <line x1="15" y1="80" x2="5" y2="125" stroke="#94a3b8" stroke-width="2.5"/>
+        <line x1="15" y1="80" x2="25" y2="125" stroke="#94a3b8" stroke-width="2.5"/>
+    </g>
+    <defs>
+        <marker id="arrL" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><path d="M8,0 L0,3 L8,6" fill="#475569"/></marker>
+        <marker id="arrR" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#475569"/></marker>
+    </defs>`;
+    lcSvg.innerHTML = svg;
+    lcSvg.setAttribute('viewBox', '0 0 700 340');
+    lcSvg._machineX = machineX;
+    lcSvg._scale = scale;
+}
+
+/* ── LC drag ─────────────────────────────────── */
+lcSvg.addEventListener('pointerdown', e => {
+    if (e.target.classList.contains('lc-guard')) {
+        lcDragging = true;
+        lcDragHandle = e.target.classList.contains('lc-guard-end') ? 'end' : 'start';
+        lcSvg.setPointerCapture(e.pointerId);
+    }
+});
+lcSvg.addEventListener('pointermove', e => {
+    if (!lcDragging) return;
+    const rect = lcSvg.getBoundingClientRect();
+    const pxX = (e.clientX - rect.left) / rect.width * 700;
+    let dist;
+    if (lcOrientation === 'horizontal' && lcSvg._hazardRightPx) {
+        dist = Math.round((lcSvg._hazardRightPx - pxX) / lcSvg._hScale);
+        if (lcDragHandle === 'end' && Number.isFinite(lcSvg._curtainLength)) {
+            const endDistance = Math.max(0, Math.min(3000, dist));
+            lcCurtainLengthFrozen = lcSvg._curtainLength;
+            lcActual.value = Math.max(0, Math.min(3000, Math.round(endDistance + lcCurtainLengthFrozen)));
+            calcLC();
+            return;
+        }
+        if (lcDragHandle === 'start') {
+            lcCurtainLengthFrozen = null;
+        }
+    } else {
+        dist = Math.round((lcSvg._machineX - pxX) / lcSvg._scale);
+    }
+    dist = Math.max(0, Math.min(3000, dist));
+    lcActual.value = dist;
+    calcLC();
+});
+lcSvg.addEventListener('pointerup', () => { lcDragging = false; lcDragHandle = null; });
+
+[lcT, lcD, lcKmode, lcActual, lcH].forEach(el => el.addEventListener('input', calcLC));
+[lcT, lcD, lcKmode, lcActual, lcH].forEach(el => el.addEventListener('change', calcLC));
+lcActual.addEventListener('input', () => { lcCurtainLengthFrozen = null; });
+lcH.addEventListener('input', () => { lcCurtainLengthFrozen = null; });
+lcT.addEventListener('input', () => { lcCurtainLengthFrozen = null; });
+lcStepIn.addEventListener('input', () => { lcStepManualOverride = true; syncStepInputs(lcStepIn, Math.max(0, Math.ceil(parseFloat(lcActual.value) || 0))); calcLC(); });
+lcStepInNumber.addEventListener('input', () => { lcStepManualOverride = true; syncStepInputs(lcStepInNumber, Math.max(0, Math.ceil(parseFloat(lcActual.value) || 0))); calcLC(); });
+lcStepUseSuggested.addEventListener('click', () => {
+    const actual = Math.max(0, parseFloat(lcActual.value) || 0);
+    const H = Math.max(0, parseFloat(lcH.value) || 0);
+    const curtainLength = clamp(lcCurtainLengthFrozen == null ? Math.max(0, actual - 1600 * (parseFloat(lcT.value) || 0)) : lcCurtainLengthFrozen, 0, actual);
+    applySuggestedStepValue(H, actual, curtainLength, true);
+    calcLC();
+});
+
+/* ════════════════════════════════════════════════
+   TAB 2 — REACHING THROUGH  (ISO 13857 Table 4)
+   ════════════════════════════════════════════════ */
+const TABLE4 = [
+    //  [maxE, slot, square, round]
+    [4,    2,   2,   2],
+    [6,   10,   5,   5],
+    [8,   20,  15,   5],
+    [10,  80,  25,  20],
+    [12, 100,  80,  80],
+    [20, 120, 120, 120],
+    [30, 850, 120, 120],
+    [40, 850, 200, 120],
+    [120,850, 850, 850],
+];
+
+function lookupTable4(e, shape) {
+    const col = shape === 'slot' ? 1 : shape === 'square' ? 2 : 3;
+    for (const row of TABLE4) {
+        if (e <= row[0]) return row[col];
+    }
+    return 850;
+}
+
+const fgE      = document.getElementById('fgE');
+const fgShape  = document.getElementById('fgShape');
+const fgActual = document.getElementById('fgActual');
+
+function calcFG() {
+    const e = parseFloat(fgE.value) || 1;
+    const shape = fgShape.value;
+    const actual = parseFloat(fgActual.value) || 0;
+    const sr = lookupTable4(e, shape);
+    const safe = actual >= sr;
+    statusStates.fg = safe;
+    updateGlobalBadge();
+
+    const panel = document.getElementById('fgResultPanel');
+    panel.className = 'result-panel ' + (safe ? 'result-safe' : 'result-danger');
+    document.getElementById('fgSr').textContent = sr + ' mm';
+
+    const bodyPart = e <= 4 ? 'Fingertip' : e <= 6 ? 'Fingertip' : e <= 10 ? 'Finger up to knuckle joint' : e <= 20 ? 'Hand' : e <= 30 ? (shape === 'slot' ? 'Arm up to junction with shoulder' : 'Hand') : e <= 40 ? (shape === 'round' ? 'Hand' : 'Arm up to junction with shoulder') : 'Arm up to junction with shoulder';
+    document.getElementById('fgDetail').innerHTML =
+        `Opening: ${shape} ${e} mm → Body part: <strong>${bodyPart}</strong><br>` +
+        `Actual: <strong>${actual} mm</strong> — ` +
+        (safe
+            ? `<strong>≥ ${sr} mm ✓</strong>`
+            : `<strong>< ${sr} mm ✗ — Increase distance or reduce opening!</strong>`);
+
+    document.getElementById('fgShapeTag').textContent = shape.charAt(0).toUpperCase() + shape.slice(1);
+    renderTable4(shape, e);
+    drawFgSvg(e, sr, actual, safe, shape);
+}
+
+function renderTable4(shape, currentE) {
+    const col = shape === 'slot' ? 1 : shape === 'square' ? 2 : 3;
+    let html = `<table class="data-table">
+        <thead><tr><th>Opening e (mm)</th><th>Slot</th><th>Square</th><th>Round</th><th>Body part</th></tr></thead><tbody>`;
+    const partsSlot  = ['Fingertip','Fingertip','Finger up to knuckle joint','Finger up to knuckle joint','Hand','Hand','Arm up to junction with shoulder','Arm up to junction with shoulder','Arm up to junction with shoulder'];
+    const partsSqRnd = ['Fingertip','Fingertip','Finger up to knuckle joint','Finger up to knuckle joint','Hand','Hand','Hand','Arm up to junction with shoulder','Arm up to junction with shoulder'];
+    const partsRound = ['Fingertip','Fingertip','Finger up to knuckle joint','Finger up to knuckle joint','Hand','Hand','Hand','Hand','Arm up to junction with shoulder'];
+    const getPart = (i) => shape === 'slot' ? partsSlot[i] : shape === 'round' ? partsRound[i] : partsSqRnd[i];
+    const labels = ['e ≤ 4','4 < e ≤ 6','6 < e ≤ 8','8 < e ≤ 10','10 < e ≤ 12','12 < e ≤ 20','20 < e ≤ 30','30 < e ≤ 40','40 < e ≤ 120'];
+    TABLE4.forEach((row, i) => {
+        const hl = currentE <= row[0] && (i === 0 || currentE > TABLE4[i-1][0]);
+        const cls = hl ? ' class="highlight"' : '';
+        const slotCls = (hl && shape === 'slot') ? ' class="highlight"' : '';
+        const sqCls   = (hl && shape === 'square') ? ' class="highlight"' : '';
+        const rndCls  = (hl && shape === 'round') ? ' class="highlight"' : '';
+        html += `<tr><td${cls}>${labels[i]}</td><td${slotCls}>${row[1]}</td><td${sqCls}>${row[2]}</td><td${rndCls}>${row[3]}</td><td${cls}>${getPart(i)}</td></tr>`;
+    });
+    html += '</tbody></table>';
+    document.getElementById('fgTableContainer').innerHTML = html;
+}
+
+function drawFgSvg(e, sr, actual, safe, shape) {
+    const W = 700, H = 300;
+    const guardThick = 20, guardX = W/2 - 50;
+    const hazardX = guardX + guardThick + Math.min(actual * 0.25, 250);
+    const oy = H / 2;
+    const openingH = Math.min(Math.max(e * 1.5, 8), 100);
+    const gc = safe ? '#2563eb' : '#dc2626';
+    const svg = `<rect x="0" y="0" width="${W}" height="${H}" fill="#f8fafc"/>
+    <rect x="${guardX}" y="40" width="${guardThick}" height="${H-80}" rx="2" fill="${gc}" opacity=".8"/>
+    <rect x="${guardX}" y="${oy - openingH/2}" width="${guardThick}" height="${openingH}" fill="#f8fafc" stroke="${gc}" stroke-width="1.5"/>
+    <text x="${guardX + guardThick/2}" y="${oy + openingH/2 + 16}" text-anchor="middle" font-size="10" fill="${gc}">e = ${e} mm</text>
+    <text x="${guardX + guardThick/2}" y="30" text-anchor="middle" font-size="11" fill="${gc}" font-weight="600">Guard</text>
+    <rect x="${hazardX}" y="${oy - 30}" width="60" height="60" rx="4" fill="#dc2626" opacity=".8"/>
+    <text x="${hazardX + 30}" y="${oy + 4}" text-anchor="middle" font-size="10" fill="#fff" font-weight="700">Hazard</text>
+    <line x1="${guardX + guardThick}" y1="${H - 35}" x2="${hazardX}" y2="${H - 35}" stroke="#475569" stroke-width="1" marker-start="url(#arrL2)" marker-end="url(#arrR2)"/>
+    <text x="${(guardX + guardThick + hazardX)/2}" y="${H - 42}" text-anchor="middle" font-size="11" fill="#475569" font-weight="600">${actual} mm</text>
+    <g opacity=".45">
+        <line x1="${guardX - 40}" y1="${oy}" x2="${guardX}" y2="${oy}" stroke="#a78bfa" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="${guardX - 40}" cy="${oy}" r="8" fill="#a78bfa"/>
+        <text x="${guardX - 70}" y="${oy - 14}" font-size="10" fill="#7c3aed" font-weight="600">Reach</text>
+    </g>
+    <line x1="${guardX + guardThick}" y1="${oy - 50}" x2="${guardX + guardThick + Math.min(sr * 0.25, 250)}" y2="${oy - 50}" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrR2)"/>
+    <text x="${guardX + guardThick + 5}" y="${oy - 56}" font-size="10" fill="#16a34a" font-weight="600">sr ≥ ${sr} mm</text>
+    <defs>
+        <marker id="arrL2" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><path d="M8,0 L0,3 L8,6" fill="#475569"/></marker>
+        <marker id="arrR2" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#475569"/></marker>
+    </defs>`;
+    document.getElementById('fgSvg').innerHTML = svg;
+}
+
+[fgE, fgShape, fgActual].forEach(el => el.addEventListener('input', calcFG));
+
+/* ════════════════════════════════════════════════
+   TAB 3 — REACHING OVER  (ISO 13857 Table 2)
+   ════════════════════════════════════════════════
+
+   ISO 13857:2019, Table 2 — Reaching over protective structures
+   Persons aged ≥ 14 years.
+
+   RULES:
+     • When value = 0: hazard is unreachable — no horizontal distance needed
+     • When value > 0: minimum horizontal safety distance c (mm)
+     • Values based on anthropometric 95th percentile upper limb reach envelope
+
+   The table data below must be verified against your copy of the standard.
+*/
+
+const T2_GUARDS  = [1000,1200,1400,1600,1800,2000,2200,2400,2500,2700];
+const T2_HAZARDS = [2700,2600,2400,2200,2000,1800,1600,1400,1200,1000,800,600,400,200,0];
+
+const T2_DATA = {
+    1000: {2700:0,2600:900,2400:1100,2200:1300,2000:1400,1800:1500,1600:1500,1400:1500,1200:1500,1000:1500,800:1500,600:1400,400:1400,200:1200,0:1100},
+    1200: {2700:0,2600:800,2400:1000,2200:1200,2000:1300,1800:1400,1600:1500,1400:1500,1200:1500,1000:1400,800:1300,600:1300,400:1200,200:900,0:500},
+    1400: {2700:0,2600:700,2400:900,2200:1000,2000:1100,1800:1100,1600:1400,1400:1400,1200:1400,1000:1000,800:900,600:800,400:400,200:0,0:0},
+    1600: {2700:0,2600:600,2400:800,2200:900,2000:900,1800:900,1600:1100,1400:1100,1200:1100,1000:800,800:600,600:0,400:0,200:0,0:0},
+    1800: {2700:0,2600:600,2400:700,2200:800,2000:800,1800:800,1600:900,1400:900,1200:900,1000:0,800:0,600:0,400:0,200:0,0:0},
+    2000: {2700:0,2600:500,2400:600,2200:600,2000:600,1800:600,1600:800,1400:800,1200:700,1000:0,800:0,600:0,400:0,200:0,0:0},
+    2200: {2700:0,2600:400,2400:400,2200:400,2000:400,1800:0,1600:500,1400:0,1200:0,1000:0,800:0,600:0,400:0,200:0,0:0},
+    2400: {2700:0,2600:300,2400:300,2200:300,2000:0,1800:0,1600:0,1400:0,1200:0,1000:0,800:0,600:0,400:0,200:0,0:0},
+    2500: {2700:0,2600:100,2400:100,2200:0,2000:0,1800:0,1600:0,1400:0,1200:0,1000:0,800:0,600:0,400:0,200:0,0:0},
+    2700: {2700:0,2600:0,2400:0,2200:0,2000:0,1800:0,1600:0,1400:0,1200:0,1000:0,800:0,600:0,400:0,200:0,0:0},
+};
+
+const roB = document.getElementById('roB');
+const roA = document.getElementById('roA');
+const roActual = document.getElementById('roActual');
+const roSvg = document.getElementById('roSvg');
+let roDragMode = null; // 'guard' or 'hazard'
+
+function calcRO() {
+    const b = parseInt(roB.value);
+    const a = parseInt(roA.value);
+    const actual = parseFloat(roActual.value) || 0;
+
+    const bKey = findClosest(T2_GUARDS, b);
+    const aKey = findClosest(T2_HAZARDS, a);
+    const sr = T2_DATA[bKey] ? T2_DATA[bKey][aKey] : 0;
+
+    let safe, detail;
+    if (sr === 0) {
+        safe = true;
+        statusStates.ro = true;
+        document.getElementById('roSr').textContent = '0 mm (unreachable)';
+        detail = `Guard at <strong>${b} mm</strong>: hazard at <strong>${a} mm</strong> is unreachable. No horizontal distance required.`;
+    } else {
+        safe = actual >= sr;
+        statusStates.ro = safe;
+        document.getElementById('roSr').textContent = sr + ' mm';
+        detail = `Guard (b): <strong>${b} mm</strong> · Hazard (a): <strong>${a} mm</strong> · Table lookup: b=${bKey}, a=${aKey}<br>` +
+                 `Actual distance: <strong>${actual} mm</strong> — ` +
+                 (safe
+                     ? `<strong>≥ ${sr} mm ✓</strong>`
+                     : `<strong>< ${sr} mm ✗ — Increase distance or raise guard!</strong>`);
+    }
+
+    updateGlobalBadge();
+    const panel = document.getElementById('roResultPanel');
+    panel.className = 'result-panel ' + (safe ? 'result-safe' : 'result-danger');
+    document.getElementById('roDetail').innerHTML = detail;
+
+    drawRoSvg(b, a, sr, actual, safe);
+    renderTable2(bKey, aKey);
+}
+
+function findClosest(arr, val) {
+    return arr.reduce((prev, curr) =>
+        Math.abs(curr - val) < Math.abs(prev - val) ? curr : prev);
+}
+
+/* ── Render full Table 2 reference ───────────── */
+function renderTable2(selB, selA) {
+    let html = '<table class="data-table"><thead><tr><th rowspan="2">Hazard<br>height<br>a (mm)</th><th colspan="' + T2_GUARDS.length + '">Height of protective structure b (mm)</th></tr><tr>';
+    T2_GUARDS.forEach(b => { html += `<th>${b}</th>`; });
+    html += '</tr></thead><tbody>';
+    T2_HAZARDS.forEach(a => {
+        html += '<tr>';
+        html += `<th>${a}</th>`;
+        T2_GUARDS.forEach(b => {
+            const v = T2_DATA[b][a];
+            const isSelected = b === selB && a === selA;
+            html += `<td${isSelected ? ' class="highlight"' : ''}>${v}</td>`;
+        });
+        html += '</tr>';
+    });
+    html += '</tbody></table>';
+    document.getElementById('roTableContainer').innerHTML = html;
+}
+
+/* ── RO SVG drawing ──────────────────────────── */
+function drawRoSvg(b, a, sr, actual, safe) {
+    const W = 700, H = 420;
+    const floor = H - 45;
+    const topMargin = 35;
+    const vScale = (floor - topMargin) / 2800;
+    const hScale = (W - 180) / 1600;
+
+    const guardX = 180;
+    const guardTop = floor - b * vScale;
+
+    const hazardCx = guardX + Math.max(actual, 0) * hScale;
+    const hazardY  = floor - a * vScale;
+    const hazardW  = 50, hazardHH = 40;
+
+    const gc = safe ? '#2563eb' : '#dc2626';
+
+    let srLine = '';
+    if (sr > 0) {
+        const srPx = Math.min(sr * hScale, W - guardX - 30);
+        srLine = `
+        <line x1="${guardX}" y1="${floor - 16}" x2="${guardX + srPx}" y2="${floor - 16}" stroke="#16a34a" stroke-width="1.5" stroke-dasharray="5,3" marker-end="url(#arrR3)"/>
+        <text x="${guardX + srPx/2}" y="${floor - 23}" text-anchor="middle" font-size="10" fill="#16a34a" font-weight="600">c ≥ ${sr} mm</text>`;
+    }
+
+    // Person (~1800 mm)
+    const personH = 1800 * vScale;
+    const personX = guardX - 55;
+    const personTop = floor - personH;
+    // Reach arc
+    const reachTop = Math.min(2500, Math.max(b + 100, 1800)) * vScale;
+    const armY = floor - reachTop;
+    const canReach = sr > 0 && b < 2700;
+
+    const svg = `
+    <rect x="0" y="0" width="${W}" height="${H}" fill="#f8fafc"/>
+    <!-- floor -->
+    <line x1="15" y1="${floor}" x2="${W-15}" y2="${floor}" stroke="#94a3b8" stroke-width="2"/>
+    <text x="${W/2}" y="${floor+18}" text-anchor="middle" font-size="10" fill="#94a3b8">Floor</text>
+
+    <!-- height scale -->
+    <line x1="30" y1="${floor}" x2="30" y2="${topMargin}" stroke="#e2e8f0" stroke-width="1"/>
+    ${[0,500,1000,1500,2000,2500].map(h => {
+        const y = floor - h * vScale;
+        return `<line x1="25" y1="${y}" x2="35" y2="${y}" stroke="#cbd5e1" stroke-width="1"/>
+                <text x="22" y="${y+3}" text-anchor="end" font-size="8" fill="#94a3b8">${h}</text>`;
+    }).join('')}
+
+    <!-- guard -->
+    <line class="ro-guard" x1="${guardX}" y1="${guardTop}" x2="${guardX}" y2="${floor}" stroke="${gc}" stroke-width="5" style="cursor:ew-resize"/>
+    <rect class="ro-guard" x="${guardX-6}" y="${guardTop-6}" width="12" height="12" rx="3" fill="${gc}" style="cursor:ew-resize"/>
+    <text x="${guardX}" y="${guardTop - 14}" text-anchor="middle" font-size="10" fill="${gc}" font-weight="700">Guard b = ${b} mm</text>
+
+    <!-- hazard zone (draggable vertically) -->
+    <rect class="ro-hazard" x="${hazardCx - hazardW/2}" y="${hazardY - hazardHH/2}" width="${hazardW}" height="${hazardHH}" rx="4" fill="#dc2626" opacity=".85" style="cursor:ns-resize"/>
+    <text x="${hazardCx}" y="${hazardY + 4}" text-anchor="middle" font-size="9" fill="#fff" font-weight="700" style="pointer-events:none">Hazard</text>
+    <text x="${hazardCx}" y="${hazardY - hazardHH/2 - 6}" text-anchor="middle" font-size="9" fill="#dc2626" font-weight="600" style="pointer-events:none">a = ${a} mm</text>
+    <!-- drag handle arrows on hazard -->
+    <text class="ro-hazard" x="${hazardCx + hazardW/2 + 8}" y="${hazardY - 4}" font-size="10" fill="#dc2626" style="cursor:ns-resize">▲</text>
+    <text class="ro-hazard" x="${hazardCx + hazardW/2 + 8}" y="${hazardY + 10}" font-size="10" fill="#dc2626" style="cursor:ns-resize">▼</text>
+
+    <!-- distance dimension -->
+    <line x1="${guardX}" y1="${floor - 16}" x2="${hazardCx}" y2="${floor - 16}" stroke="#475569" stroke-width="1" marker-start="url(#arrL3)" marker-end="url(#arrR3)"/>
+    <text x="${(guardX + hazardCx)/2}" y="${floor - 23}" text-anchor="middle" font-size="10" fill="#475569" font-weight="600">${actual} mm</text>
+
+    ${srLine}
+
+    <!-- person silhouette -->
+    <g transform="translate(${personX}, ${personTop})" opacity=".35">
+        <circle cx="15" cy="12" r="13" fill="#94a3b8"/>
+        <line x1="15" y1="25" x2="15" y2="90" stroke="#94a3b8" stroke-width="3"/>
+        <line x1="15" y1="45" x2="-2" y2="70" stroke="#94a3b8" stroke-width="2.5"/>
+        <line x1="15" y1="45" x2="32" y2="70" stroke="#94a3b8" stroke-width="2.5"/>
+        <line x1="15" y1="90" x2="5" y2="${personH - 5}" stroke="#94a3b8" stroke-width="2.5"/>
+        <line x1="15" y1="90" x2="25" y2="${personH - 5}" stroke="#94a3b8" stroke-width="2.5"/>
+    </g>
+    ${canReach ? `<path d="M${personX+30},${armY} Q${guardX},${guardTop - 15} ${guardX + 25},${guardTop + 12}" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="4,3" opacity=".5"/>
+    <text x="${guardX+30}" y="${guardTop + 8}" font-size="8" fill="#f59e0b">Reach arc</text>` : ''}
+
+    <defs>
+        <marker id="arrL3" markerWidth="8" markerHeight="6" refX="0" refY="3" orient="auto"><path d="M8,0 L0,3 L8,6" fill="#475569"/></marker>
+        <marker id="arrR3" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto"><path d="M0,0 L8,3 L0,6" fill="#475569"/></marker>
+    </defs>`;
+
+    roSvg.innerHTML = svg;
+    roSvg._guardX = guardX;
+    roSvg._hScale = hScale;
+    roSvg._vScale = vScale;
+    roSvg._floor = floor;
+}
+
+/* ── RO drag handling — guard (horizontal) & hazard (vertical) ── */
+roSvg.addEventListener('pointerdown', e => {
+    if (e.target.classList.contains('ro-guard')) {
+        roDragMode = 'guard';
+        roSvg.setPointerCapture(e.pointerId);
+    } else if (e.target.classList.contains('ro-hazard')) {
+        roDragMode = 'hazard';
+        roSvg.setPointerCapture(e.pointerId);
+    }
+});
+
+roSvg.addEventListener('pointermove', e => {
+    if (!roDragMode) return;
+    const rect = roSvg.getBoundingClientRect();
+    const svgW = 700, svgH = 420;
+    const pxX = (e.clientX - rect.left) / rect.width * svgW;
+    const pxY = (e.clientY - rect.top) / rect.height * svgH;
+
+    if (roDragMode === 'guard') {
+        const hScale = roSvg._hScale;
+        const guardBaseX = 180;
+        const storedActual = parseFloat(roActual.value) || 0;
+        const hazardFixedPx = guardBaseX + storedActual * hScale;
+        let newDist = Math.round((hazardFixedPx - pxX) / hScale);
+        newDist = Math.max(0, Math.min(1600, newDist));
+        roActual.value = newDist;
+        calcRO();
+    } else if (roDragMode === 'hazard') {
+        const vScale = roSvg._vScale;
+        const flr = roSvg._floor;
+        let newA = Math.round((flr - pxY) / vScale);
+        // Snap to nearest T2_HAZARDS value
+        newA = findClosest(T2_HAZARDS, newA);
+        newA = Math.max(0, Math.min(2700, newA));
+        roA.value = newA;
+        calcRO();
+    }
+});
+
+roSvg.addEventListener('pointerup', () => { roDragMode = null; });
+
+[roB, roA, roActual].forEach(el => el.addEventListener('input', calcRO));
+
+/* ────────────────────────────────────────────────
+   INIT
+   ──────────────────────────────────────────────── */
+calcLC();
+calcFG();
+calcRO();
+
+})();
+</script>
+</body>
+</html>
